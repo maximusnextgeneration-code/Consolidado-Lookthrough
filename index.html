@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consolidado Look-through — Sep 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#fff; --panel-2:#f0f2f5; --border:#e2e6ec; --border-strong:#cbd2db;
+    --text:#0d1b2a; --text-2:#4a5568; --text-3:#6b7280; --text-4:#94a3b8;
+    --green:#0a6b3b; --green-soft:#d1fae5; --green-light:#ecfdf5;
+    --red:#9b1c1c; --red-soft:#fee2e2; --red-light:#fef2f2;
+    --blue:#1e3a8a; --blue-soft:#dbeafe; --blue-light:#eff6ff;
+    --amber:#92400e; --amber-soft:#fef3c7;
+    --sidebar-bg:#0d1b2a; --sidebar-bg-2:#1b263b; --sidebar-text:#cbd5e1; --sidebar-muted:#64748b;
+    --shadow-sm:0 1px 2px rgba(13,27,42,.04); --shadow-md:0 4px 12px rgba(13,27,42,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+  /* SIDEBAR */
+  .sidebar{background:linear-gradient(180deg,var(--sidebar-bg),var(--sidebar-bg-2));color:var(--sidebar-text);position:sticky;top:0;height:100vh;overflow-y:auto;padding:24px 0;display:flex;flex-direction:column}
+  .sb-brand{padding:0 22px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .sb-logo{font-size:10px;letter-spacing:2.5px;color:var(--sidebar-muted);text-transform:uppercase;font-weight:600;margin-bottom:5px}
+  .sb-title{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.4px}
+  .sb-sub{font-size:11px;color:var(--sidebar-muted);margin-top:3px}
+  .modo{display:flex;gap:3px;margin:13px 0 2px;background:rgba(255,255,255,.08);padding:3px;border-radius:9px}
+  .modo button{flex:1;border:0;background:transparent;color:var(--sidebar-text);font-family:inherit;
+    font-size:11.5px;font-weight:700;padding:6px 4px;border-radius:7px;cursor:pointer;transition:all .15s;letter-spacing:.2px}
+  .modo button:hover{color:#fff}
+  .modo button.on{background:#fff;color:var(--sidebar-bg)}
+  .badge-modo{font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700}
+  .badge-modo.actual{background:var(--blue-soft);color:var(--blue)}
+  .badge-modo.sugerido{background:var(--green-soft);color:var(--green)}
+  td.pos{color:var(--green);font-weight:600}td.neg{color:var(--red);font-weight:600}
+  .tag.acc{font-size:10px;padding:2px 9px}
+  .tag.compra{background:#d1fae5;color:#065f46}
+  .tag.aumenta{background:#dbeafe;color:#1e3a8a}
+  .tag.reduce{background:#fef3c7;color:#92400e}
+  .tag.venta{background:#fee2e2;color:#9b1c1c}
+  .tag.mantiene{background:#f1f5f9;color:#64748b}
+  .sb-section{padding:16px 16px 5px;font-size:10px;letter-spacing:1.8px;color:var(--sidebar-muted);text-transform:uppercase;font-weight:700}
+  .sb-item{display:flex;align-items:center;gap:10px;padding:8px 14px;margin:1px 10px;border-radius:8px;color:var(--sidebar-text);cursor:pointer;font-size:12.5px;font-weight:500;transition:all .15s}
+  .sb-item:hover{background:rgba(255,255,255,.06);color:#fff}
+  .sb-item.active{background:rgba(30,58,138,.45);color:#fff;font-weight:600}
+  .sb-item .ico{width:17px;text-align:center;flex-shrink:0;opacity:.9;font-size:13px}
+  .sb-item .count{margin-left:auto;font-size:10px;font-weight:700;background:rgba(255,255,255,.1);padding:1px 7px;border-radius:999px}
+  .sb-item .cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .sb-foot{margin-top:auto;padding:16px 22px 0;border-top:1px solid rgba(255,255,255,.08);font-size:10.5px;color:var(--sidebar-muted);line-height:1.6}
+  .sb-foot strong{color:#e2e8f0}
+  /* MAIN */
+  .mh{background:rgba(255,255,255,.95);border-bottom:1px solid var(--border);padding:20px 34px 18px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;position:sticky;top:0;z-index:40;backdrop-filter:blur(8px)}
+  .mh-tag{font-size:10.5px;letter-spacing:2px;color:var(--text-3);text-transform:uppercase;font-weight:600}
+  .mh-h1{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-top:3px;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .mh-h1 .badge{font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700;background:var(--blue-soft);color:var(--blue)}
+  .mh-meta{text-align:right;font-size:11.5px;color:var(--text-2);flex-shrink:0}
+  .content{padding:26px 34px 70px;max-width:1500px}
+  .view{display:none}.view.active{display:block}
+  /* CARDS / KPI */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow-sm)}
+  .kpi .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-3);font-weight:700}
+  .kpi .val{font-size:23px;font-weight:800;letter-spacing:-.5px;margin-top:6px;font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:11.5px;color:var(--text-3);margin-top:3px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px 24px;box-shadow:var(--shadow-sm);margin-bottom:18px}
+  .card-title{font-size:14.5px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .card-title .meta{font-size:11px;color:var(--text-3);font-weight:500}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  .grid2 > .card{margin-bottom:0}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px}
+  .grid3 > .card{margin-bottom:0}
+  @media(max-width:1200px){.grid2,.grid3{grid-template-columns:1fr}}
+  .section-title{font-size:11.5px;letter-spacing:2px;color:var(--text-3);text-transform:uppercase;font-weight:700;margin:30px 0 14px;display:flex;align-items:center;gap:12px}
+  .section-title::after{content:"";flex:1;height:1px;background:var(--border)}
+  /* TABLES */
+  table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+  th{text-align:left;padding:9px 10px;color:var(--text-3);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:#fafbfc;white-space:nowrap;position:sticky;top:0}
+  th.num{text-align:right}
+  td{padding:8px 10px;border-bottom:1px solid #eef0f3;vertical-align:top}
+  td.num{text-align:right;white-space:nowrap}
+  td.muted{color:var(--text-4)}
+  tr.total td{background:var(--amber-soft);font-weight:700;border-top:2px solid var(--border-strong)}
+  tr.group-row{cursor:pointer}
+  tr.group-row:hover td{background:var(--blue-light)}
+  tr.sub-row td{background:#fafbfc;font-size:12px;color:var(--text-2)}
+  .tbl-wrap{max-height:640px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+  .caret{display:inline-block;width:14px;transition:transform .15s;color:var(--text-4);font-size:10px}
+  .caret.open{transform:rotate(90deg)}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;flex-shrink:0}
+  .bar{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden;min-width:60px}
+  .bar > div{height:100%;border-radius:4px}
+  .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .pill{padding:7px 14px;border-radius:999px;border:1px solid var(--border);background:var(--panel);font-size:12px;font-weight:600;cursor:pointer;transition:all .12s}
+  .pill:hover{border-color:var(--border-strong)}
+  .pill.active{background:var(--sidebar-bg);color:#fff;border-color:var(--sidebar-bg)}
+  .note{background:#fafbfc;border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:11.8px;line-height:1.65;color:var(--text-2);margin-top:12px}
+  .note strong{color:var(--text)}
+  .note.warn{background:var(--amber-soft);border-color:#fcd34d}
+  .chart-box{position:relative;height:290px}
+  .chart-box.tall{height:340px}
+  .chart-box.short{height:230px}
+  .search{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-family:inherit;width:230px;color:var(--text)}
+  .search:focus{outline:2px solid var(--blue-soft);border-color:var(--blue)}
+  select.filter{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;color:var(--text);background:var(--panel);cursor:pointer}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .filters .lblf{font-size:11px;color:var(--text-3);font-weight:600}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--blue)}
+  .legend{display:flex;flex-direction:column;gap:7px;font-size:12px}
+  .legend .li{display:flex;align-items:center;gap:8px}
+  .legend .li .nm{flex:1;color:var(--text-2)}
+  .legend .li .vl{font-weight:700;font-variant-numeric:tabular-nums}
+  .legend .li .pc{color:var(--text-3);width:48px;text-align:right;font-variant-numeric:tabular-nums}
+  .split{display:grid;grid-template-columns:1.15fr .85fr;gap:24px;align-items:center}
+  @media(max-width:900px){.split{grid-template-columns:1fr}}
+  @media print{.sidebar{display:none}.app{grid-template-columns:1fr}.view{display:block!important;page-break-before:always}}
+</style>
+<style>
+  .vizsel{display:inline-flex;gap:2px;background:#f0f2f5;padding:3px;border-radius:8px;flex-shrink:0}
+  .vizsel button{border:0;background:transparent;font-family:inherit;font-size:11px;font-weight:600;color:var(--text-3);
+    padding:4px 10px;border-radius:6px;cursor:pointer;transition:all .12s}
+  .vizsel button:hover{color:var(--text)}
+  .vizsel button.on{background:#fff;color:var(--blue);box-shadow:0 1px 2px rgba(13,27,42,.12)}
+  .ighy{display:flex;height:26px;border-radius:7px;overflow:hidden;margin-top:14px}
+  .ighy div{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden}
+  .scope{margin-top:12px}
+  .scope label{display:block;font-size:9.5px;letter-spacing:1.6px;color:var(--sidebar-muted);text-transform:uppercase;font-weight:700;margin-bottom:5px}
+  .scope select{width:100%;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);
+    color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .scope select option{color:#0d1b2a}
+  .btn-csv{margin-left:auto;padding:7px 14px;border-radius:8px;border:1px solid var(--blue);background:var(--blue);color:#fff;
+    font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .btn-csv:hover{opacity:.9}
+  .sarr{color:var(--blue)}
+  @media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.content,.mh{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">PORTAFOLIO CONSOLIDADO</div>
+      <div class="sb-title">Look-through</div>
+      <div class="sb-sub" id="sbSub"></div>
+      <div class="scope"><label for="sbScope">Ver</label><select id="sbScope" onchange="setScope(this.value)"></select></div>
+    </div>
+    <div class="sb-section">Reporte</div>
+    <div class="sb-item active" data-view="general"><span class="ico">&#128202;</span> Dashboard General</div>
+    <div class="sb-item" data-view="allocation"><span class="ico">&#128451;</span> Asset Allocation</div>
+    <div class="sb-item" data-view="rentafija"><span class="ico">&#128200;</span> Renta Fija</div>
+    <div class="sb-item" data-view="rentavariable"><span class="ico">&#128201;</span> Renta Variable</div>
+    <div class="sb-item" data-view="vehiculos"><span class="ico">&#11088;</span> Fondos y ETFs</div>
+    <div class="sb-item" data-view="concentracion"><span class="ico">&#127919;</span> Concentraci&oacute;n</div>
+    <div class="sb-item" data-view="posiciones"><span class="ico">&#128203;</span> Posiciones <span class="count" id="cntPos"></span></div>
+    <div class="sb-section">Cuentas</div>
+    <div id="sbBancos"></div>
+    <div class="sb-foot"><div><strong id="sbFootTot"></strong></div><div id="sbFoot"></div></div>
+  </nav>
+  <main class="main">
+    <header class="mh">
+      <div><div class="mh-tag" id="mhTag"></div><div class="mh-h1" id="mhH1"></div></div>
+      <div class="mh-meta" id="mhMeta"></div>
+    </header>
+    <div class="content">
+      <div class="view active" id="view-general"></div>
+      <div class="view" id="view-allocation"></div>
+      <div class="view" id="view-rentafija"></div>
+      <div class="view" id="view-rentavariable"></div>
+      <div class="view" id="view-vehiculos"></div>
+      <div class="view" id="view-concentracion"></div>
+      <div class="view" id="view-posiciones"></div>
+      <div class="view" id="view-banco"></div>
+    </div>
+  </main>
+</div>
+<script>
+const RAW = {"actual": {"total": 23525006.07, "total_reportado": 23525006.07, "dif_no_asignada": 0, "n_pos": 43, "cuentas": [{"nombre": "Stifel 4852-2502", "total_reportado": 12216118.08, "total": 12216118.08, "n_pos": 25}, {"nombre": "Pershing HAX-810089", "total_reportado": 10531379.24, "total": 10531379.24, "n_pos": 14}, {"nombre": "Stifel 2617-8169", "total_reportado": 777508.75, "total": 777508.75, "n_pos": 4}], "posiciones": [{"cuenta": "Stifel 2617-8169", "nombre": "Stifel Insured Bank Deposit Program (FDIC)", "tipo": "Cash", "ticker": "", "isin": "", "cantidad": 80390.44, "precio": 1, "valor": 80390.44, "accrued": 0, "clase": "Liquidez", "sub": "Efectivo", "region": "EE.UU.", "emisor": "Stifel Bank & Trust", "gestora": "Stifel", "vto": null, "cupon": null, "moneda": "USD", "bruto": 80390.44, "mx": null, "match": "liquidez", "nota": "depósito bancario", "lt": {"cl": [100, 0, 0, 0, 0, 0]}, "mxname": ""}, {"cuenta": "Stifel 2617-8169", "nombre": "BOPREAL (BCRA) 5.000% 31/10/2027 - call 30/04/2027", "tipo": "Bond", "ticker": "", "isin": "P0490MAE1", "cantidad": 191000, "precio": 98.909, "valor": 188916.19, "accrued": 4085.28, "clase": "Renta Fija", "sub": "Soberano / BCRA Argentina", "region": "Argentina", "emisor": "BCRA (BOPREAL)", "gestora": "", "vto": "2027-10-31", "cupon": 5.0, "moneda": "USD", "bruto": 188916.19, "mx": 6608, "match": "proxy", "nota": "probablemente la misma serie (1C, BPOC7); el statement no informa la serie", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 100.0, 0.0], "rfgeo": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [0.0, 100.0, 0.0, 0.0, 0.0], "dur": 0.5603, "ytw": 7.8001}, "mxname": "BOPREAL 5% 31/10/2027 (BPOC7)"}, {"cuenta": "Stifel 2617-8169", "nombre": "BOPREAL (BCRA) Serie 1B 5.000% 31/10/2027", "tipo": "Bond", "ticker": "", "isin": "P0798APM2", "cantidad": 185000, "precio": 99.307, "valor": 183717.95, "accrued": 3956.94, "clase": "Renta Fija", "sub": "Soberano / BCRA Argentina", "region": "Argentina", "emisor": "BCRA (BOPREAL)", "gestora": "", "vto": "2027-10-31", "cupon": 5.0, "moneda": "USD", "bruto": 183717.95, "mx": 6608, "match": "proxy", "nota": "BOPREAL Serie 1B no está cargada: se usa BOPREAL 2027 Serie 1C (mismo emisor, cupón y vencimiento)", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 100.0, 0.0], "rfgeo": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [0.0, 100.0, 0.0, 0.0, 0.0], "dur": 0.5603, "ytw": 7.8001}, "mxname": "BOPREAL 5% 31/10/2027 (BPOC7)"}, {"cuenta": "Stifel 2617-8169", "nombre": "iShares $ Corp Bond UCITS ETF", "tipo": "ETF", "ticker": "ISCXF", "isin": "G4954G147", "cantidad": 53735, "precio": 6.0386, "valor": 324484.17, "accrued": 0, "clase": "Renta Fija", "sub": "Corporativo Investment Grade", "region": "EE.UU.", "emisor": "iShares $ Corp Bond UCITS ETF", "gestora": "iShares (BlackRock)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 324484.17, "mx": 1068, "match": "directo", "nota": "clase USD Acc (LQDA)", "lt": {"cl": [0.8898, 99.1102, 0.0, 0.0, 0.0, 0.0], "rat": [0.9183, 11.9879, 46.9021, 40.1917, 0.0, 0.0, 0.0, 0.0], "rfgeo": [87.7212, 0.16, 5.0795, 4.0996, 0.0, 0.0, 0.9499, 0.0, 1.9898, 0.0, 0.0, 0.0], "rfsec": [99.8782, 0.1218, 0.0, 0.0, 0.0], "dur": 7.6828, "ytw": 5.9}, "mxname": "iShares USD Corp Bond (LQDA LN)"}, {"cuenta": "Stifel 4852-2502", "nombre": "Stifel Insured Bank Deposit Program (FDIC)", "tipo": "Cash", "ticker": "", "isin": "", "cantidad": 12581.48, "precio": 1, "valor": 12581.48, "accrued": 0, "clase": "Liquidez", "sub": "Efectivo", "region": "EE.UU.", "emisor": "Stifel Bank & Trust", "gestora": "Stifel", "vto": null, "cupon": null, "moneda": "USD", "bruto": 12581.48, "mx": null, "match": "liquidez", "nota": "depósito bancario", "lt": {"cl": [100, 0, 0, 0, 0, 0]}, "mxname": ""}, {"cuenta": "Stifel 4852-2502", "nombre": "MercadoLibre Inc", "tipo": "Equity", "ticker": "MELI", "isin": "58733R102", "cantidad": 302, "precio": 1728.53, "valor": 522016.06, "accrued": 0, "clase": "Renta Variable", "sub": "América Latina", "region": "América Latina", "emisor": "MercadoLibre Inc", "gestora": "", "vto": null, "cupon": null, "moneda": "USD", "bruto": 522016.06, "mx": 1009, "match": "directo", "nota": "", "lt": {"cl": [0.0, 0.0, 100.0, 0.0, 0.0, 0.0], "rvgeo": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rvsec": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}, "mxname": "MercadoLibre Inc"}, {"cuenta": "Stifel 4852-2502", "nombre": "iShares MSCI Brazil ETF", "tipo": "ETF", "ticker": "EWZ", "isin": "464286400", "cantidad": 10738, "precio": 37.25, "valor": 399990.5, "accrued": 0, "clase": "Renta Variable", "sub": "América Latina", "region": "América Latina", "emisor": "iShares MSCI Brazil ETF", "gestora": "iShares (BlackRock)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 399990.5, "mx": 1162, "match": "directo", "nota": "", "lt": {"cl": [2.2602, 0.0, 97.7398, 0.0, 0.0, 0.0], "rvgeo": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rvsec": [13.5578, 2.9367, 36.2733, 0.0, 5.2799, 1.1972, 13.0666, 1.7293, 17.18, 8.7793, 0.0]}, "mxname": "iShares MSCI Brazil ETF (EWZ)"}, {"cuenta": "Stifel 4852-2502", "nombre": "iShares MSCI ACWI ETF", "tipo": "ETF", "ticker": "ACWI", "isin": "464288257", "cantidad": 5335, "precio": 158.765, "valor": 847011.27, "accrued": 0, "clase": "Renta Variable", "sub": "Global", "region": "Global", "emisor": "iShares MSCI ACWI ETF", "gestora": "iShares (BlackRock)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 847011.27, "mx": 1167, "match": "directo", "nota": "", "lt": {"cl": [0.32, 0.0, 99.68, 0.0, 0.0, 0.0], "rvgeo": [71.8965, 0.0, 3.3082, 7.5216, 0.0, 0.0, 1.4655, 2.5647, 5.5927, 6.2284, 1.4224, 0.0], "rvsec": [3.6417, 8.4771, 16.9342, 1.4948, 4.675, 8.4069, 2.3174, 8.116, 4.1132, 10.3933, 31.4305]}, "mxname": "iShares MSCI ACWI (ACWI)"}, {"cuenta": "Stifel 4852-2502", "nombre": "SPDR S&P 500 ETF Trust", "tipo": "ETF", "ticker": "SPY", "isin": "78462F103", "cantidad": 1709, "precio": 762.63, "valor": 1303334.67, "accrued": 0, "clase": "Renta Variable", "sub": "EE.UU.", "region": "EE.UU.", "emisor": "SPDR S&P 500 ETF Trust", "gestora": "SPDR (State Street)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 1303334.67, "mx": 1131, "match": "directo", "nota": "", "lt": {"cl": [0.2585, 0.0, 99.7415, 0.0, 0.0, 0.0], "rvgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rvsec": [1.7598, 8.9391, 12.2488, 1.7798, 4.5495, 9.2091, 1.9798, 10.069, 3.5596, 8.1292, 37.7762]}, "mxname": "SPDR S&P 500 (SPY)"}, {"cuenta": "Stifel 4852-2502", "nombre": "Technology Select Sector SPDR ETF", "tipo": "ETF", "ticker": "XLK", "isin": "81369Y803", "cantidad": 7150, "precio": 195.75, "valor": 1399612.5, "accrued": 0, "clase": "Renta Variable", "sub": "EE.UU. Sectorial (Tecnología)", "region": "EE.UU.", "emisor": "Technology Select Sector SPDR ETF", "gestora": "SPDR (State Street)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 1399612.5, "mx": 1187, "match": "directo", "nota": "", "lt": {"cl": [0.0796, 0.0, 99.9204, 0.0, 0.0, 0.0], "rvgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rvsec": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 100.0]}, "mxname": "Technology Select SPDR (XLK)"}, {"cuenta": "Stifel 4852-2502", "nombre": "US Treasury Strip Principal 15/05/2027", "tipo": "Bond", "ticker": "", "isin": "9128207D3", "cantidad": 675000, "precio": 97.316, "valor": 656883.0, "accrued": 0, "clase": "Renta Fija", "sub": "Soberano EE.UU.", "region": "EE.UU.", "emisor": "US Treasury", "gestora": "", "vto": "2027-05-15", "cupon": 0.0, "moneda": "USD", "bruto": 656883.0, "mx": 8588, "match": "proxy", "nota": "Strip 15/05/2027 no está: se usa UST 0,5% 31/05/2027", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [0.0, 100.0, 0.0, 0.0, 0.0], "dur": 0.6463, "ytw": 4.3723}, "mxname": "UST 0,5% 31/05/2027"}, {"cuenta": "Stifel 4852-2502", "nombre": "BOPREAL (BCRA) Serie 1B 5.000% 31/10/2027", "tipo": "Bond", "ticker": "", "isin": "P0798APM2", "cantidad": 105000, "precio": 99.307, "valor": 104272.35, "accrued": 2245.83, "clase": "Renta Fija", "sub": "Soberano / BCRA Argentina", "region": "Argentina", "emisor": "BCRA (BOPREAL)", "gestora": "", "vto": "2027-10-31", "cupon": 5.0, "moneda": "USD", "bruto": 104272.35, "mx": 6608, "match": "proxy", "nota": "BOPREAL Serie 1B no está cargada: se usa BOPREAL 2027 Serie 1C (mismo emisor, cupón y vencimiento)", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 100.0, 0.0], "rfgeo": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [0.0, 100.0, 0.0, 0.0, 0.0], "dur": 0.5603, "ytw": 7.8001}, "mxname": "BOPREAL 5% 31/10/2027 (BPOC7)"}, {"cuenta": "Stifel 4852-2502", "nombre": "US Treasury Strip Principal 15/02/2028", "tipo": "Bond", "ticker": "", "isin": "9128204M6", "cantidad": 694000, "precio": 93.727, "valor": 650465.38, "accrued": 0, "clase": "Renta Fija", "sub": "Soberano EE.UU.", "region": "EE.UU.", "emisor": "US Treasury", "gestora": "", "vto": "2028-02-15", "cupon": 0.0, "moneda": "USD", "bruto": 650465.38, "mx": 7249, "match": "proxy", "nota": "Strip 15/02/2028 no está: se usa UST 0,75% 31/01/2028", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [0.0, 100.0, 0.0, 0.0, 0.0], "dur": 1.3094, "ytw": 4.677}, "mxname": "UST 0,75% 31/01/2028"}, {"cuenta": "Stifel 4852-2502", "nombre": "JPMorgan Chase & Co 2.182% 01/06/2028 (fix/float) - A/A1", "tipo": "Bond", "ticker": "", "isin": "46647PBR6", "cantidad": 525000, "precio": 98.159, "valor": 515334.75, "accrued": 3818.5, "clase": "Renta Fija", "sub": "Corporativo USD", "region": "EE.UU.", "emisor": "JPMorgan Chase & Co", "gestora": "", "vto": "2028-06-01", "cupon": 2.182, "moneda": "USD", "bruto": 515334.75, "mx": 1239, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 0.6445, "ytw": 5.491}, "mxname": "JP MORGAN 2,182% 01/06/2028"}, {"cuenta": "Stifel 4852-2502", "nombre": "Methanex Corp 5.250% 15/12/2029 - BB/Ba2", "tipo": "Bond", "ticker": "", "isin": "59151KAL2", "cantidad": 395000, "precio": 96.838, "valor": 382510.1, "accrued": 6106.04, "clase": "Renta Fija", "sub": "Corporativo USD", "region": "Global", "emisor": "Methanex Corp", "gestora": "", "vto": "2029-12-15", "cupon": 5.25, "moneda": "USD", "bruto": 382510.1, "mx": 3256, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 2.9279, "ytw": 5.9899}, "mxname": "METHANEX 5,25% 15/12/2029"}, {"cuenta": "Stifel 4852-2502", "nombre": "United Rentals North America 5.250% 15/01/2030 - BB+/Ba2", "tipo": "Bond", "ticker": "", "isin": "911365BL7", "cantidad": 200000, "precio": 97.276, "valor": 194552.0, "accrued": 2216.67, "clase": "Renta Fija", "sub": "Corporativo USD", "region": "EE.UU.", "emisor": "United Rentals North America", "gestora": "", "vto": "2030-01-15", "cupon": 5.25, "moneda": "USD", "bruto": 194552.0, "mx": 3258, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 3.0121, "ytw": 5.8018}, "mxname": "UNITED RENTALS 5,25% 15/01/2030"}, {"cuenta": "Stifel 4852-2502", "nombre": "Société Générale 3.000% 22/01/2030 Reg S - BBB/Baa2", "tipo": "Bond", "ticker": "", "isin": "83368TAW8", "cantidad": 200000, "precio": 90.972, "valor": 181944.0, "accrued": 1150.0, "clase": "Renta Fija", "sub": "Corporativo USD", "region": "Europa", "emisor": "Société Générale", "gestora": "", "vto": "2030-01-22", "cupon": 3.0, "moneda": "USD", "bruto": 181944.0, "mx": 1247, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 3.128, "ytw": 5.94}, "mxname": "SOCIETE GENERALE 3% 22/1/2030"}, {"cuenta": "Stifel 4852-2502", "nombre": "BP Capital Markets America 3.633% 06/04/2030 - A-/A1", "tipo": "Bond", "ticker": "", "isin": "10373QBL3", "cantidad": 200000, "precio": 94.338, "valor": 188676.0, "accrued": 3532.08, "clase": "Renta Fija", "sub": "Corporativo USD", "region": "Europa", "emisor": "BP Capital Markets America", "gestora": "", "vto": "2030-04-06", "cupon": 3.633, "moneda": "USD", "bruto": 188676.0, "mx": 3670, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 3.3091, "ytw": 5.3718}, "mxname": "BP CAPITAL 3,633% 06/04/2030"}, {"cuenta": "Stifel 4852-2502", "nombre": "Vale Overseas Ltd 3.750% 08/07/2030 - BBB/Baa2", "tipo": "Bond", "ticker": "", "isin": "91911TAQ6", "cantidad": 200000, "precio": 92.515, "valor": 185030.0, "accrued": 1729.17, "clase": "Renta Fija", "sub": "Corporativo USD", "region": "América Latina", "emisor": "Vale Overseas Ltd", "gestora": "", "vto": "2030-07-08", "cupon": 3.75, "moneda": "USD", "bruto": 185030.0, "mx": 1271, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 3.4926, "ytw": 5.8363}, "mxname": "VALE OVERSEAS 3,75% 8/7/2030"}, {"cuenta": "Stifel 4852-2502", "nombre": "JPMorgan Chase & Co 4.250% 13/02/2031 MTN - A/A1", "tipo": "Bond", "ticker": "", "isin": "48130KQH3", "cantidad": 500000, "precio": 93.775, "valor": 468875.0, "accrued": 13458.33, "clase": "Renta Fija", "sub": "Corporativo USD", "region": "EE.UU.", "emisor": "JPMorgan Chase & Co", "gestora": "", "vto": "2031-02-13", "cupon": 4.25, "moneda": "USD", "bruto": 468875.0, "mx": 5275, "match": "proxy", "nota": "JPM 4,25% 2031 no está: se usa JPMorgan 2,956% 13/05/2031 (mismo emisor y año)", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 3.3886, "ytw": 5.975}, "mxname": "JPMORGAN 2,956% 13/05/2031"}, {"cuenta": "Stifel 4852-2502", "nombre": "US Treasury Note 4.125% 31/03/2032", "tipo": "Bond", "ticker": "", "isin": "91282CMT5", "cantidad": 610000, "precio": 95.25, "valor": 581025.0, "accrued": 68.75, "clase": "Renta Fija", "sub": "Soberano EE.UU.", "region": "EE.UU.", "emisor": "US Treasury", "gestora": "", "vto": "2032-03-31", "cupon": 4.125, "moneda": "USD", "bruto": 581025.0, "mx": 4789, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [0.0, 100.0, 0.0, 0.0, 0.0], "dur": 4.942, "ytw": 5.1018}, "mxname": "UST 4,125% 31/03/2032"}, {"cuenta": "Stifel 4852-2502", "nombre": "Invesco US Dollar Liquidity Fund Select Acc USD", "tipo": "Money Market Fund", "ticker": "", "isin": "G491BN135", "cantidad": 79.3, "precio": 1183.3986, "valor": 93843.5, "accrued": 0, "clase": "Liquidez", "sub": "Money Market", "region": "EE.UU.", "emisor": "Invesco US Dollar Liquidity", "gestora": "Invesco", "vto": null, "cupon": null, "moneda": "USD", "bruto": 93843.5, "mx": 7787, "match": "directo", "nota": "money market: se toma como liquidez", "lt": {"cl": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0]}, "mxname": "Invesco US Dollar Liquidity Portfolio Select - Acc"}, {"cuenta": "Stifel 4852-2502", "nombre": "Neuberger Berman Short Duration EM Debt A Acc USD", "tipo": "Mutual Fund", "ticker": "", "isin": "G6S30D261", "cantidad": 24895.978, "precio": 14.41, "valor": 358751.04, "accrued": 0, "clase": "Renta Fija", "sub": "Deuda Emergente", "region": "Emergentes", "emisor": "Neuberger Berman Short Duration EM Debt", "gestora": "Neuberger Berman", "vto": null, "cupon": null, "moneda": "USD", "bruto": 358751.04, "mx": 833, "match": "directo", "nota": "", "lt": {"cl": [3.2472, 96.7528, 0.0, 0.0, 0.0, 0.0], "rat": [7.3448, 7.1988, 19.6191, 17.7639, 26.7449, 16.8155, 3.5884, 0.9246], "rfgeo": [11.1929, 27.0119, 0.0, 0.0, 15.2438, 32.8849, 0.0, 0.0, 0.0, 13.6665, 0.0, 0.0], "rfsec": [3.902, 88.8035, 0.0, 7.2945, 0.0], "dur": 2.5729, "ytw": 5.8061}, "mxname": "Neuberger Berman Short Duration EM Debt A - Acc"}, {"cuenta": "Stifel 4852-2502", "nombre": "iShares MSCI EM Asia UCITS ETF", "tipo": "ETF", "ticker": "CETFF", "isin": "G2700U105", "cantidad": 1797, "precio": 301.0208, "valor": 540934.37, "accrued": 0, "clase": "Renta Variable", "sub": "Emergentes", "region": "Emergentes", "emisor": "iShares MSCI EM Asia UCITS ETF", "gestora": "iShares (BlackRock)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 540934.37, "mx": 1105, "match": "directo", "nota": "", "lt": {"cl": [0.45, 0.0, 99.55, 0.0, 0.0, 0.0], "rvgeo": [0.0, 0.0, 0.0, 4.3699, 0.0, 0.0, 0.0, 20.3488, 0.0, 59.5356, 15.7457, 0.0], "rvsec": [3.0635, 8.1559, 18.6722, 0.5926, 1.6774, 2.8827, 1.135, 5.9562, 2.1796, 6.2174, 49.4676]}, "mxname": "iShares MSCI EM Asia (CEMA LN)"}, {"cuenta": "Stifel 4852-2502", "nombre": "iShares Global Clean Energy Transition UCITS ETF", "tipo": "ETF", "ticker": "IMSIF", "isin": "G4953W176", "cantidad": 11616, "precio": 9.825, "valor": 114127.2, "accrued": 0, "clase": "Renta Variable", "sub": "Temático (Energía limpia)", "region": "Global", "emisor": "iShares Global Clean Energy Transition", "gestora": "iShares (BlackRock)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 114127.2, "mx": 1209, "match": "directo", "nota": "", "lt": {"cl": [0.23, 0.0, 99.77, 0.0, 0.0, 0.0], "rvgeo": [40.1553, 7.1751, 0.0, 13.6788, 0.0, 2.9686, 0.0, 23.3924, 3.1575, 4.112, 5.3603, 0.0], "rvsec": [0.2907, 0.0, 0.0, 0.0, 0.0, 0.0, 40.5934, 0.0, 1.6939, 34.0784, 23.3437]}, "mxname": "iShares Global Clean Energy (INRG LN)"}, {"cuenta": "Stifel 4852-2502", "nombre": "iShares $ High Yield Corp Bond UCITS ETF USD Acc", "tipo": "ETF", "ticker": "ISHYF", "isin": "G4R53X265", "cantidad": 40849, "precio": 7.39, "valor": 301874.11, "accrued": 0, "clase": "Renta Fija", "sub": "High Yield", "region": "EE.UU.", "emisor": "iShares $ High Yield Corp Bond UCITS ETF", "gestora": "iShares (BlackRock)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 301874.11, "mx": 1101, "match": "directo", "nota": "", "lt": {"cl": [0.7899, 99.2101, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 1.8545, 63.0921, 27.696, 6.2891, 1.0683], "rfgeo": [92.8907, 0.04, 2.3098, 2.1498, 0.0, 1.2799, 0.3, 0.0, 0.5499, 0.48, 0.0, 0.0], "rfsec": [99.8543, 0.1457, 0.0, 0.0, 0.0], "dur": 3.1686, "ytw": 7.13}, "mxname": "iShares USD High Yield Corp Bond (IHYA LN)"}, {"cuenta": "Stifel 4852-2502", "nombre": "iShares J.P. Morgan EM Corp Bond UCITS ETF USD Acc", "tipo": "ETF", "ticker": "ISJMF", "isin": "G4R54M789", "cantidad": 64560, "precio": 6.628, "valor": 427903.68, "accrued": 0, "clase": "Renta Fija", "sub": "Deuda Emergente", "region": "Emergentes", "emisor": "iShares J.P. Morgan EM Corp Bond UCITS ETF", "gestora": "iShares (BlackRock)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 427903.68, "mx": 1085, "match": "directo", "nota": "", "lt": {"cl": [0.36, 99.64, 0.0, 0.0, 0.0, 0.0], "rat": [0.1204, 5.2584, 23.9839, 33.4872, 21.0437, 11.6307, 1.3547, 3.1209], "rfgeo": [1.4094, 26.8106, 0.0, 0.0, 0.0, 33.15, 0.0, 16.6765, 0.0, 11.2981, 10.6554, 0.0], "rfsec": [73.9789, 26.0211, 0.0, 0.0, 0.0], "dur": 4.1433, "ytw": 6.43}, "mxname": "iShares JP Morgan USD EM Corp Bond (EMCA LN)"}, {"cuenta": "Stifel 4852-2502", "nombre": "SPDR Bloomberg 0-5 Year US High Yield Bond UCITS ETF", "tipo": "ETF", "ticker": "SGSSF", "isin": "G8406H793", "cantidad": 21268, "precio": 39.005, "valor": 829558.34, "accrued": 0, "clase": "Renta Fija", "sub": "High Yield", "region": "EE.UU.", "emisor": "SPDR 0-5 Year US High Yield Bond UCITS ETF", "gestora": "SPDR (State Street)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 829558.34, "mx": 1098, "match": "proxy", "nota": "SPDR 0-5Y US HY UCITS no está: se usa SJNK (SPDR, mismo índice Bloomberg 0-5Y HY, versión US)", "lt": {"cl": [1.6164, 98.3785, 0.0, 0.0, 0.0051, 0.0], "rat": [0.2586, 0.0, 0.0, 0.3185, 53.9719, 35.7194, 8.944, 0.7876], "rfgeo": [90.78, 0.38, 2.5, 3.29, 0.05, 0.06, 0.76, 0.0, 1.22, 0.91, 0.04, 0.01], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 2.12, "ytw": 7.99}, "mxname": "SPDR BBG Barc. Short Term High Yield Bond (SJNK)"}, {"cuenta": "Stifel 4852-2502", "nombre": "Vanguard USD Corporate 1-3 Year Bond UCITS ETF Acc", "tipo": "ETF", "ticker": "VNGBF", "isin": "G9T17W541", "cantidad": 15521, "precio": 61.5303, "valor": 955011.78, "accrued": 0, "clase": "Renta Fija", "sub": "Corporativo Investment Grade", "region": "EE.UU.", "emisor": "Vanguard USD Corporate 1-3 Year Bond UCITS ETF", "gestora": "Vanguard", "vto": null, "cupon": null, "moneda": "USD", "bruto": 955011.78, "mx": 1077, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.1453, 9.8779, 48.5127, 41.4463, 0.0, 0.0, 0.0, 0.0178], "rfgeo": [74.1166, 0.67, 5.0965, 9.898, 0.0, 1.0683, 2.4093, 1.1143, 3.2069, 1.785, 0.5739, 0.0612], "rfsec": [99.533, 0.467, 0.0, 0.0, 0.0], "dur": 1.847, "ytw": 4.8928}, "mxname": "Vanguard USD Corp. 1-3 Year Bond (VDCA LN)"}, {"cuenta": "Pershing HAX-810089", "nombre": "BNY Mellon US Treasury Fund (Service Shares)", "tipo": "Money Market Fund", "ticker": "", "isin": "", "cantidad": 1032556.83, "precio": 1, "valor": 1032556.83, "accrued": 0, "clase": "Liquidez", "sub": "Money Market", "region": "EE.UU.", "emisor": "BNY Mellon US Treasury", "gestora": "BNY Mellon", "vto": null, "cupon": null, "moneda": "USD", "bruto": 1032556.83, "mx": 3954, "match": "proxy", "nota": "a confirmar si es el fondo irlandés; money market: se toma como liquidez", "lt": {"cl": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0]}, "mxname": "BNY Mellon US Treasury Service - Dist"}, {"cuenta": "Pershing HAX-810089", "nombre": "US Treasury Strip Interest 15/02/2033", "tipo": "Bond", "ticker": "", "isin": "9128334V9", "cantidad": 942000, "precio": 71.728, "valor": 675677.76, "accrued": 0, "clase": "Renta Fija", "sub": "Soberano EE.UU.", "region": "EE.UU.", "emisor": "US Treasury", "gestora": "", "vto": "2033-02-15", "cupon": 0.0, "moneda": "USD", "bruto": 675677.76, "mx": 5520, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [0.0, 100.0, 0.0, 0.0, 0.0], "dur": 6.356, "ytw": 5.2448}, "mxname": "UST 0% 15/02/2033"}, {"cuenta": "Pershing HAX-810089", "nombre": "Brasil (República Federativa) 6.000% 20/10/2033 - BB/Ba1", "tipo": "Bond", "ticker": "", "isin": "US105756CF53", "cantidad": 475000, "precio": 95.9, "valor": 455525.0, "accrued": 12666.67, "clase": "Renta Fija", "sub": "Soberano LatAm", "region": "América Latina", "emisor": "República Federativa de Brasil", "gestora": "", "vto": "2033-10-20", "cupon": 6.0, "moneda": "USD", "bruto": 455525.0, "mx": 3272, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [0.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0], "rfgeo": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rfsec": [0.0, 100.0, 0.0, 0.0, 0.0], "dur": 5.6604, "ytw": 6.4927}, "mxname": "BRAZIL 6% 20/10/2033"}, {"cuenta": "Pershing HAX-810089", "nombre": "Man GLG Global Investment Grade Opportunities DV USD", "tipo": "Mutual Fund", "ticker": "", "isin": "IE000EYC6YG5", "cantidad": 8742.023, "precio": 112.93, "valor": 987236.66, "accrued": 0, "clase": "Renta Fija", "sub": "Corporativo Investment Grade", "region": "Global", "emisor": "Man GLG Global IG Opportunities", "gestora": "Man Group", "vto": null, "cupon": null, "moneda": "USD", "bruto": 987236.66, "mx": 5834, "match": "proxy", "nota": "clase DV no está: se usa la clase D Acc del mismo fondo", "lt": {"cl": [3.7076, 93.8679, 0.0, 0.0, 0.126, 2.2985], "rat": [2.4667, 1.3739, 5.0895, 71.4612, 6.0887, 13.0412, 0.0937, 0.3851], "rfgeo": [37.3, 16.01, 11.01, 24.61, 0.0, 2.11, 2.09, 0.0, 0.0, 2.16, 0.0, 4.71], "rfsec": [100.0, 0.0, 0.0, 0.0, 0.0], "dur": 5.7, "ytw": 7.14}, "mxname": "Man GLG Global Inv. Grade Opps D - Acc"}, {"cuenta": "Pershing HAX-810089", "nombre": "PIMCO GIS Income Fund Institutional Acc USD", "tipo": "Mutual Fund", "ticker": "", "isin": "G7113P361", "cantidad": 20432.215, "precio": 19.45, "valor": 397406.58, "accrued": 0, "clase": "Renta Fija", "sub": "Multisector / Flexible", "region": "Global", "emisor": "PIMCO GIS Income Fund", "gestora": "PIMCO", "vto": null, "cupon": null, "moneda": "USD", "bruto": 397406.58, "mx": 3026, "match": "directo", "nota": "", "lt": {"cl": [0.0, 100.0, 0.0, 0.0, 0.0, 0.0], "rat": [12.4531, 59.7756, 7.4882, 11.0057, 5.3563, 1.1146, 2.8065, 0.0], "rfgeo": [42.0872, 10.655, 16.3676, 13.2334, 0.8398, 7.8684, 8.6564, 0.0037, 0.0, 0.1726, 0.1159, 0.0], "rfsec": [17.05, 20.8927, 0.0, 16.0346, 46.0227], "dur": 6.7738, "ytw": 7.4165}, "mxname": "PIMCO GIS Income I - Acc"}, {"cuenta": "Pershing HAX-810089", "nombre": "Franklin Templeton High Yield Fund A Acc", "tipo": "Mutual Fund", "ticker": "", "isin": "L4058S181", "cantidad": 28554.688, "precio": 25.1, "valor": 716722.67, "accrued": 0, "clase": "Renta Fija", "sub": "High Yield", "region": "EE.UU.", "emisor": "Franklin High Yield Fund", "gestora": "Franklin Templeton", "vto": null, "cupon": null, "moneda": "USD", "bruto": 716722.67, "mx": 1373, "match": "directo", "nota": "", "lt": {"cl": [3.5286, 96.3773, 0.0, 0.0, 0.0941, 0.0], "rat": [0.0, 0.0, 0.0, 4.948, 48.035, 33.998, 8.336, 4.683], "rfgeo": [84.1952, 0.41, 3.608, 7.1169, 0.0, 0.194, 0.593, 0.0, 0.354, 0.0, 0.0, 3.529], "rfsec": [96.3096, 0.1585, 0.0, 3.5319, 0.0], "dur": 3.6522, "ytw": 6.6873}, "mxname": "Franklin High Yield A - Acc"}, {"cuenta": "Pershing HAX-810089", "nombre": "JPMorgan Funds Income Fund A Acc USD", "tipo": "Mutual Fund", "ticker": "", "isin": "L5785X484", "cantidad": 6858.24, "precio": 144.58, "valor": 991564.34, "accrued": 0, "clase": "Renta Fija", "sub": "Multisector / Flexible", "region": "Global", "emisor": "JPMorgan Income Fund", "gestora": "J.P. Morgan AM", "vto": null, "cupon": null, "moneda": "USD", "bruto": 991564.34, "mx": 770, "match": "directo", "nota": "", "lt": {"cl": [9.75, 90.25, 0.0, 0.0, 0.0, 0.0], "rat": [12.5653, 41.3218, 1.9084, 10.8578, 18.8128, 6.8903, 1.7477, 5.8959], "rfgeo": [92.4503, 3.33, 0.47, 1.1799, 0.07, 2.0298, 0.04, 0.0, 0.11, 0.1, 0.22, 0.0], "rfsec": [26.6373, 4.2896, 0.0, 9.749, 59.3241], "dur": 2.59, "ytw": 6.76}, "mxname": "JPMorgan Income Fund A - Acc"}, {"cuenta": "Pershing HAX-810089", "nombre": "Morgan Stanley Emerging Markets Debt Opportunities A USD", "tipo": "Mutual Fund", "ticker": "", "isin": "L6487Q579", "cantidad": 43113.354, "precio": 14.43, "valor": 622125.7, "accrued": 0, "clase": "Renta Fija", "sub": "Deuda Emergente", "region": "Emergentes", "emisor": "MS EM Debt Opportunities", "gestora": "Morgan Stanley IM", "vto": null, "cupon": null, "moneda": "USD", "bruto": 622125.7, "mx": 2993, "match": "directo", "nota": "clase A", "lt": {"cl": [36.8584, 63.0163, 0.0, 0.0, 0.0064, 0.1189], "rat": [0.0703, 24.4942, 2.2392, 14.0342, 18.3769, 18.1838, 4.881, 17.7204], "rfgeo": [14.0376, 28.3652, 0.0, 1.7114, 15.5528, 26.3157, 0.0, 0.8591, 0.0, 0.0, 4.4178, 8.7402], "rfsec": [37.2606, 25.7621, 0.1189, 36.8585, 0.0], "dur": 2.5192, "ytw": 8.7842}, "mxname": "MS Emerging Market Debt Opportunities A - Acc"}, {"cuenta": "Pershing HAX-810089", "nombre": "Schroder ISF Global Target Return C Acc USD", "tipo": "Mutual Fund", "ticker": "", "isin": "L81465889", "cantidad": 4226.95, "precio": 183.8033, "valor": 776927.36, "accrued": 0, "clase": "Multiactivo", "sub": "Multiactivo / Retorno objetivo", "region": "Global", "emisor": "Schroder ISF Global Target Return", "gestora": "Schroders", "vto": null, "cupon": null, "moneda": "USD", "bruto": 776927.36, "mx": 898, "match": "proxy", "nota": "clase C no está: se usa la clase A Acc del mismo fondo", "lt": {"cl": [2.4955, 47.6278, 39.8474, 0.0, 10.0292, 0.0], "rat": [2.3141, 23.6364, 7.9339, 41.3223, 16.6942, 6.6116, 1.4876, 0.0], "rfgeo": [44.9808, 5.1998, 3.9426, 8.0643, 2.6881, 2.8673, 16.8454, 0.5376, 1.2545, 0.7168, 3.4049, 9.4979], "rfsec": [48.8571, 34.2857, 0.0, 0.0, 16.8572], "dur": 2.67, "ytw": 8.0, "rvgeo": [74.2538, 0.3731, 4.8507, 2.9851, 0.0, 0.0, 1.1194, 0.0, 4.4776, 9.7015, 2.2388, 0.0], "rvsec": [9.7059, 14.4118, 0.0, 0.0, 4.7059, 10.0, 0.0, 0.0, 6.7647, 20.8824, 33.5294]}, "mxname": "Schroder Global Target Return A - Acc"}, {"cuenta": "Pershing HAX-810089", "nombre": "Schroder ISF Global Credit Income A Acc USD", "tipo": "Mutual Fund", "ticker": "", "isin": "L81469675", "cantidad": 7650.43, "precio": 140.5085, "valor": 1074950.44, "accrued": 0, "clase": "Renta Fija", "sub": "Multisector / Flexible", "region": "Global", "emisor": "Schroder ISF Global Credit Income", "gestora": "Schroders", "vto": null, "cupon": null, "moneda": "USD", "bruto": 1074950.44, "mx": 2120, "match": "directo", "nota": "", "lt": {"cl": [0.7, 99.3, 0.0, 0.0, 0.0, 0.0], "rat": [4.79, 28.22, 7.32, 26.27, 17.11, 12.96, 0.59, 2.74], "rfgeo": [47.7462, 6.6098, 9.5092, 15.6151, 5.4052, 1.8017, 10.9105, 0.0, 1.2012, 0.8008, 0.4004, 0.0], "rfsec": [68.73, 6.0697, 0.0, 2.7043, 22.496], "dur": 5.2, "ytw": 6.8}, "mxname": "Schroder Global Credit Income A - Acc"}, {"cuenta": "Pershing HAX-810089", "nombre": "iShares MSCI ACWI ETF", "tipo": "ETF", "ticker": "ACWI", "isin": "464288257", "cantidad": 5022, "precio": 158.765, "valor": 797317.83, "accrued": 0, "clase": "Renta Variable", "sub": "Global", "region": "Global", "emisor": "iShares MSCI ACWI ETF", "gestora": "iShares (BlackRock)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 797317.83, "mx": 1167, "match": "directo", "nota": "", "lt": {"cl": [0.32, 0.0, 99.68, 0.0, 0.0, 0.0], "rvgeo": [71.8965, 0.0, 3.3082, 7.5216, 0.0, 0.0, 1.4655, 2.5647, 5.5927, 6.2284, 1.4224, 0.0], "rvsec": [3.6417, 8.4771, 16.9342, 1.4948, 4.675, 8.4069, 2.3174, 8.116, 4.1132, 10.3933, 31.4305]}, "mxname": "iShares MSCI ACWI (ACWI)"}, {"cuenta": "Pershing HAX-810089", "nombre": "ProShares Ultra S&P500 (2x)", "tipo": "ETF", "ticker": "SSO", "isin": "74347R107", "cantidad": 10600, "precio": 69.33, "valor": 734898.0, "accrued": 0, "clase": "Renta Variable", "sub": "EE.UU. apalancado (2x)", "region": "EE.UU.", "emisor": "ProShares Ultra S&P500", "gestora": "ProShares", "vto": null, "cupon": null, "moneda": "USD", "bruto": 734898.0, "mx": 7822, "match": "directo", "nota": "", "lt": {"cl": [0.0, 0.0, 75.7642, 0.0, 24.2358, 0.0], "rvgeo": [99.6129, 0.0, 0.0274, 0.2656, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0941, 0.0], "rvsec": [1.7095, 9.8151, 11.0024, 1.7963, 4.6005, 8.249, 2.1561, 10.8698, 3.1171, 7.9926, 38.6916]}, "mxname": "ProShares Ultra S&P500 (SSO)"}, {"cuenta": "Pershing HAX-810089", "nombre": "SPDR S&P 500 ETF Trust", "tipo": "ETF", "ticker": "SPY", "isin": "78462F103", "cantidad": 1089, "precio": 762.63, "valor": 830504.07, "accrued": 0, "clase": "Renta Variable", "sub": "EE.UU.", "region": "EE.UU.", "emisor": "SPDR S&P 500 ETF Trust", "gestora": "SPDR (State Street)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 830504.07, "mx": 1131, "match": "directo", "nota": "", "lt": {"cl": [0.2585, 0.0, 99.7415, 0.0, 0.0, 0.0], "rvgeo": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "rvsec": [1.7598, 8.9391, 12.2488, 1.7798, 4.5495, 9.2091, 1.9798, 10.069, 3.5596, 8.1292, 37.7762]}, "mxname": "SPDR S&P 500 (SPY)"}, {"cuenta": "Pershing HAX-810089", "nombre": "SPDR Gold Shares", "tipo": "ETF", "ticker": "GLD", "isin": "78463V107", "cantidad": 1150, "precio": 380.84, "valor": 437966.0, "accrued": 0, "clase": "Oro y Commodities", "sub": "Oro", "region": "Global", "emisor": "SPDR Gold Shares", "gestora": "SPDR (State Street)", "vto": null, "cupon": null, "moneda": "USD", "bruto": 437966.0, "mx": 1045, "match": "directo", "nota": "", "lt": {"cl": [0.0, 0.0, 0.0, 100.0, 0.0, 0.0]}, "mxname": "SPDR Gold Shares (GLD)"}], "avisos": []}, "cambios": []};
+const LBL = {"cl": ["Liquidez", "Renta Fija", "Renta Variable", "Oro / Commodities", "Otros", "Derivados"], "rat": ["AAA", "AA", "A", "BBB", "BB", "B", "CCC", "NR"], "geo": ["Norteamérica", "Latinoamérica", "Reino Unido", "Europa desarrollada", "Europa emergente", "Medio Oriente y África", "Australasia", "China", "Japón", "Asia desarrollada", "Asia emergente", "Otros"], "rfsec": ["Corporativo", "Gobierno", "Derivados", "Money market", "Titulizado"], "rvsec": ["Materiales", "Consumo discrecional", "Financiero", "Real estate", "Consumo básico", "Salud", "Utilities", "Comunicaciones", "Energía", "Industriales", "Tecnología"]};
+const DATA = RAW.actual, POS_ALL = DATA.posiciones, TOTAL_ALL = DATA.total, CUENTAS_ALL = DATA.cuentas;
+let POS = POS_ALL, TOTAL = TOTAL_ALL, CUENTAS = CUENTAS_ALL, SCOPE = '';
+const CL = LBL.cl, RAT = LBL.rat, GEO = LBL.geo, RFSEC = LBL.rfsec, RVSEC = LBL.rvsec;
+
+/* ============ helpers ============ */
+const fmt$ = (v, dec=0) => v==null ? '—' : (v<0?'-':'') + '$' + Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const fmtM = v => v==null ? '—' : (v<0?'-':'') + '$' + (Math.abs(v)>=1e6 ? (Math.abs(v)/1e6).toFixed(2)+'M' : Math.round(Math.abs(v)/1e3)+'K');
+const fmtP = (v, dec=1) => v==null || !isFinite(v) ? '—' : (v*100).toFixed(dec) + '%';
+const fmtN = (v, dec=2) => v==null || !isFinite(v) ? '—' : v.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const sum = a => a.reduce((x,y)=>x+y,0);
+
+const CL_COLORS = {'Liquidez':'#0e7490','Renta Fija':'#1e3a8a','Renta Variable':'#0a6b3b','Oro / Commodities':'#b45309','Otros':'#94a3b8','Derivados':'#7c3aed'};
+const INSTR_COLORS = {'Renta Fija':'#1e3a8a','Liquidez':'#0e7490','Renta Variable':'#0a6b3b','Multiactivo':'#be185d','Oro y Commodities':'#b45309'};
+const BANCO_COLORS = {'Stifel 4852-2502':'#1e3a8a','Pershing HAX-810089':'#0a6b3b','Stifel 2617-8169':'#b45309'};
+const RAT_COLORS = ['#064e3b','#0a6b3b','#16a34a','#65a30d','#ca8a04','#ea580c','#b91c1c','#94a3b8'];
+const PALETA = ['#1e3a8a','#0a6b3b','#b45309','#7c3aed','#0e7490','#9b1c1c','#4d7c0f','#831843','#0369a1','#ca8a04','#60a5fa','#94a3b8','#a855f7','#84cc16'];
+const clColor = c => CL_COLORS[c] || '#94a3b8';
+const bancoColor = b => BANCO_COLORS[b] || '#6b7280';
+const MATCH_TXT = {directo:'MaximUs', proxy:'Proxy', liquidez:'Efectivo'};
+const MATCH_CLS = {directo:'compra', proxy:'reduce', liquidez:'aumenta'};
+const NOTCH = [['AAA',1]].concat(...['AA','A','BBB','BB','B'].map((b,i)=>[[b+'+',i+2-1/3],[b,i+2],[b+'-',i+2+1/3]]), [['CCC',7]]);
+const ratingDe = x => x==null ? '—' : NOTCH.reduce((m,n)=>Math.abs(n[1]-x)<Math.abs(m[1]-x)?n:m)[0];
+
+/* ============ motor look-through ============
+   vectores de cada posicion (en %): cl[6] sobre el valor; rat/rfgeo/rfsec sobre la parte RF; rvgeo/rvsec sobre la parte RV */
+function lt(items){
+  const z = n => new Array(n).fill(0);
+  const r = {total:0, cl:z(CL.length), rfv:0, rvv:0, rat:z(RAT.length), rfgeo:z(GEO.length), rfsec:z(RFSEC.length),
+             rvgeo:z(GEO.length), rvsec:z(RVSEC.length), durw:0, ytww:0};
+  items.forEach(p=>{
+    const v = p.valor, L = p.lt; r.total += v;
+    L.cl.forEach((x,i)=> r.cl[i] += v*x/100);
+    const rf = v*L.cl[1]/100, rv = v*L.cl[2]/100;
+    if(rf>0 && L.rat){ r.rfv += rf;
+      L.rat.forEach((x,i)=> r.rat[i] += rf*x/100); L.rfgeo.forEach((x,i)=> r.rfgeo[i] += rf*x/100);
+      L.rfsec.forEach((x,i)=> r.rfsec[i] += rf*x/100); r.durw += rf*L.dur; r.ytww += rf*L.ytw; }
+    if(rv>0 && L.rvgeo){ r.rvv += rv;
+      L.rvgeo.forEach((x,i)=> r.rvgeo[i] += rv*x/100); L.rvsec.forEach((x,i)=> r.rvsec[i] += rv*x/100); }
+  });
+  r.dur = r.rfv ? r.durw/r.rfv : null; r.ytw = r.rfv ? r.ytww/r.rfv : null;
+  const rated = sum(r.rat.slice(0,7));
+  r.ratNum = rated ? sum(r.rat.slice(0,7).map((x,i)=>x*(i+1)))/rated : null;
+  r.ig = r.rfv ? sum(r.rat.slice(0,4))/r.rfv : null;
+  r.c = k => r.cl[CL.indexOf(k)];
+  r.otros = r.c('Oro / Commodities') + r.c('Otros') + r.c('Derivados');
+  return r;
+}
+const grupos = (labels, vals, colors) => labels.map((k,i)=>({k, v:vals[i], c:colors?colors[i%colors.length]:PALETA[i%PALETA.length]}))
+  .filter(g=>g.v>=1000);   // se omiten exposiciones residuales (< USD 1.000)
+const ordenar = gs => gs.slice().sort((a,b)=>b.v-a.v);
+let LT = lt(POS);
+
+/* agrupador generico por instrumento */
+function agrupar(items, keyFn){
+  const m = new Map();
+  items.forEach(p => { const k = keyFn(p);
+    if(!m.has(k)) m.set(k, {k, v:0, n:0, items:[]}); const g = m.get(k); g.v += p.valor; g.n++; g.items.push(p); });
+  return [...m.values()].sort((a,b)=>b.v-a.v);
+}
+const claveActivo = p => p.isin || p.nombre.toLowerCase().slice(0,48);
+
+/* ============ charts ============ */
+const CHARTS = {};
+function donut(id, gs){
+  const el = document.getElementById(id); if(!el) return; if(CHARTS[id]) CHARTS[id].destroy();
+  const t = sum(gs.map(g=>g.v));
+  CHARTS[id] = new Chart(el, {type:'doughnut',
+    data:{labels:gs.map(g=>g.k), datasets:[{data:gs.map(g=>g.v), backgroundColor:gs.map(g=>g.c), borderWidth:2, borderColor:'#fff'}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt$(c.raw)} (${fmtP(c.raw/t)})`}}}}});
+}
+/* barras: el eje de categorias lleva SIEMPRE el nombre (nunca el indice); el eje de valores lleva el formato */
+function ejes(horizontal, fmtVal, rotate){
+  const cat = {grid:{display:false}, ticks:{font:{size:10.5}, autoSkip:false, maxRotation:rotate||0, minRotation:rotate||0,
+                 callback:function(v){ const l = this.getLabelForValue(v); return l.length>34 ? l.slice(0,33)+'…' : l; }}};
+  const val = {grid:{color:'#eef0f3'}, ticks:{font:{size:10.5}, callback:fmtVal}};
+  return horizontal ? {x:val, y:cat} : {x:cat, y:val};
+}
+function barrasP(id, gs, base, opts={}){
+  const el = document.getElementById(id); if(!el) return; if(CHARTS[id]) CHARTS[id].destroy();
+  CHARTS[id] = new Chart(el, {type:'bar',
+    data:{labels:gs.map(g=>g.k), datasets:[{data:gs.map(g=>g.v/base*100), backgroundColor:gs.map(g=>g.c), borderRadius:4, barPercentage:.82}]},
+    options:{responsive:true, maintainAspectRatio:false, indexAxis: opts.horizontal?'y':'x',
+      plugins:{legend:{display:false}, tooltip:{callbacks:{title:c=>c[0].label, label:c=>` ${c.raw.toFixed(1)}% · ${fmt$(gs[c.dataIndex].v)}`}}},
+      scales:ejes(opts.horizontal, v=>v+'%', opts.rotate)}});
+}
+function barras$(id, labels, values, colors, opts={}){
+  const el = document.getElementById(id); if(!el) return; if(CHARTS[id]) CHARTS[id].destroy();
+  CHARTS[id] = new Chart(el, {type:'bar',
+    data:{labels, datasets:[{data:values, backgroundColor:colors, borderRadius:4, barPercentage:.82}]},
+    options:{responsive:true, maintainAspectRatio:false, indexAxis: opts.horizontal?'y':'x',
+      plugins:{legend:{display:false}, tooltip:{callbacks:{title:c=>c[0].label, label:c=>` ${fmt$(c.raw)} · ${fmtP(c.raw/TOTAL)} de la cartera`}}},
+      scales:ejes(opts.horizontal, v=>fmtM(v), opts.rotate)}});
+}
+
+/* ============ graficos a eleccion ============
+   viz(id, gs, base, {label, tipos, def, alto}) devuelve {btns, body}; dibujarVistas() los dibuja con el tipo elegido */
+const VIZ = {};
+const VIZ_TXT = {donut:'Torta', hbar:'Barras', vbar:'Columnas', tabla:'Tabla'};
+let PREF = {}; try { PREF = JSON.parse(localStorage.getItem('lt_viz')||'{}'); } catch(e) {}
+function viz(id, gs, base, o={}){
+  const tipos = o.tipos || ['donut','hbar','vbar','tabla'];
+  VIZ[id] = {gs, base, label:o.label||'Categor&iacute;a', tipos, alto:o.alto, tipo: tipos.includes(PREF[id]) ? PREF[id] : (o.def || tipos[0])};
+  return {btns:`<div class="vizsel" id="${id}-sel">${tipos.map(t=>`<button data-t="${t}" onclick="setViz('${id}','${t}')">${VIZ_TXT[t]}</button>`).join('')}</div>`,
+          body:`<div id="${id}-wrap"></div>`};
+}
+function setViz(id, t){ VIZ[id].tipo = t; PREF[id] = t; try { localStorage.setItem('lt_viz', JSON.stringify(PREF)); } catch(e) {} dibujar(id); }
+function dibujar(id){
+  const V = VIZ[id], wrap = document.getElementById(id+'-wrap'); if(!wrap) return;
+  document.querySelectorAll(`#${id}-sel button`).forEach(b=>b.classList.toggle('on', b.dataset.t===V.tipo));
+  if(CHARTS[id]){ CHARTS[id].destroy(); delete CHARTS[id]; }
+  const alto = V.tipo==='hbar' ? Math.max(220, V.gs.length*30+40) : (V.alto||290);
+  if(V.tipo==='tabla'){ wrap.innerHTML = tabla(V.gs, V.base, V.label); return; }
+  if(V.tipo==='donut'){
+    wrap.innerHTML = `<div class="split"><div class="chart-box" style="height:${alto}px"><canvas id="${id}"></canvas></div><div>${leyenda(V.gs, V.base)}</div></div>`;
+    donut(id, V.gs); return; }
+  wrap.innerHTML = `<div class="chart-box" style="height:${alto}px"><canvas id="${id}"></canvas></div>`;
+  barrasP(id, V.gs, V.base, {horizontal:V.tipo==='hbar', rotate:V.tipo==='vbar' && V.gs.length>5 && Math.max(...V.gs.map(g=>g.k.length))>8 ? 35 : 0});
+}
+function dibujarVistas(){ Object.keys(VIZ).forEach(id=>{ if(document.getElementById(id+'-wrap')) dibujar(id); }); }
+/* tarjeta estandar con grafico a eleccion */
+function cardViz(id, titulo, meta, gs, base, o={}){
+  const v = viz(id, gs, base, o);
+  return `<div class="card"><div class="card-title"><span>${titulo}${meta?` <span class="meta">${meta}</span>`:''}</span>${v.btns}</div>${v.body}${o.pie||''}</div>`;
+}
+
+/* ============ bloques reutilizables ============ */
+function leyenda(gs, base){
+  return `<div class="legend">` + gs.map(g=>`<div class="li"><span class="dot" style="background:${g.c}"></span>
+    <span class="nm">${esc(g.k)}</span><span class="vl">${fmt$(g.v)}</span><span class="pc">${fmtP(g.v/base)}</span></div>`).join('') + `</div>`;
+}
+function tabla(gs, base, label){
+  if(!gs.length) return '<div class="muted">Sin exposici&oacute;n.</div>';
+  const mx = Math.max(...gs.map(g=>g.v));
+  return `<table><thead><tr><th>${label}</th><th class="num">Valor</th><th class="num">%</th><th style="width:130px"></th></tr></thead><tbody>` +
+    gs.map(g=>`<tr><td><span class="dot" style="background:${g.c}"></span>${esc(g.k)}</td><td class="num">${fmt$(g.v)}</td>
+      <td class="num">${fmtP(g.v/base)}</td><td><div class="bar"><div style="width:${(g.v/mx*100).toFixed(1)}%;background:${g.c}"></div></div></td></tr>`).join('') +
+    `<tr class="total"><td>Total</td><td class="num">${fmt$(base)}</td><td class="num">100.0%</td><td></td></tr></tbody></table>`;
+}
+const gCl  = r => grupos(CL, r.cl, CL.map(clColor));
+const gRat = r => grupos(RAT, r.rat, RAT_COLORS);
+const gRfGeo = r => ordenar(grupos(GEO, r.rfgeo));
+const gRfSec = r => ordenar(grupos(RFSEC, r.rfsec));
+const gRvGeo = r => ordenar(grupos(GEO, r.rvgeo));
+const gRvSec = r => ordenar(grupos(RVSEC, r.rvsec));
+const gi = (arr, keys) => keys.reduce((s,k)=>s+arr[GEO.indexOf(k)],0);
+const DESARR = ['Reino Unido','Europa desarrollada','Australasia','Japón','Asia desarrollada'];
+const EMERG = ['Latinoamérica','Europa emergente','Medio Oriente y África','China','Asia emergente','Otros'];
+/* allocation detallado: RF abierta por calidad (escalada al monto RF de la clase), RV por region */
+function gDet(r){
+  const rfTot = r.c('Renta Fija'), k = r.rfv ? rfTot/r.rfv : 0;
+  return [
+    {k:'Liquidez', v:r.c('Liquidez'), c:'#0e7490'},
+    {k:'RF Investment Grade', v:sum(r.rat.slice(0,4))*k, c:'#1e3a8a'},
+    {k:'RF High Yield', v:sum(r.rat.slice(4,7))*k, c:'#60a5fa'},
+    {k:'RF sin rating', v:r.rat[7]*k, c:'#bfdbfe'},
+    {k:'RV Norteamérica', v:gi(r.rvgeo,['Norteamérica']), c:'#0a6b3b'},
+    {k:'RV Desarrollados ex-NA', v:gi(r.rvgeo,DESARR), c:'#4d7c0f'},
+    {k:'RV Emergentes', v:gi(r.rvgeo,EMERG), c:'#84cc16'},
+    {k:'Oro / Commodities', v:r.c('Oro / Commodities'), c:'#b45309'},
+    {k:'Otros', v:r.c('Otros')+r.c('Derivados'), c:'#94a3b8'},
+  ].filter(g=>g.v>0.5);
+}
+const tagFuente = p => `<span class="tag acc ${MATCH_CLS[p.match]}">${MATCH_TXT[p.match]}</span>`;
+const miniAA = L => `<div style="display:flex;height:9px;border-radius:4px;overflow:hidden;min-width:110px">${L.cl.map((x,i)=>x>0.5?`<div title="${CL[i]} ${x.toFixed(1)}%" style="width:${x}%;background:${clColor(CL[i])}"></div>`:'').join('')}</div>`;
+const pctLT = (L,i) => L.cl[i]>0.5 ? L.cl[i].toFixed(0)+'%' : '<span class="muted">—</span>';
+
+/* matriz cuenta x clase look-through */
+function matriz(){
+  let h = `<div class="tbl-wrap"><table><thead><tr><th>Cuenta</th>` + CL.filter((c,i)=>LT.cl[i]>0.5).map(c=>`<th class="num">${esc(c)}</th>`).join('') +
+    `<th class="num">Dur.</th><th class="num">YTW</th><th class="num">Total</th><th class="num">% cartera</th></tr></thead><tbody>`;
+  CUENTAS.forEach(c=>{
+    const r = lt(POS.filter(p=>p.cuenta===c.nombre));
+    h += `<tr class="group-row" onclick="irBanco('${esc(c.nombre)}')"><td><span class="dot" style="background:${bancoColor(c.nombre)}"></span><strong>${esc(c.nombre)}</strong></td>`;
+    CL.forEach((cl,i)=>{ if(LT.cl[i]<=0.5) return; const w = r.cl[i]/r.total;
+      h += `<td class="num" style="${w>0.0005?`background:rgba(30,58,138,${(0.04+w*0.42).toFixed(3)})`:''}">${w>0.0005?fmtP(w):'<span class="muted">—</span>'}</td>`; });
+    h += `<td class="num">${fmtN(r.dur,2)}</td><td class="num">${r.ytw==null?'—':fmtN(r.ytw,2)+'%'}</td><td class="num"><strong>${fmt$(r.total)}</strong></td><td class="num">${fmtP(r.total/TOTAL)}</td></tr>`;
+  });
+  h += `<tr class="total"><td>Consolidado</td>` + CL.map((c,i)=>LT.cl[i]>0.5?`<td class="num">${fmtP(LT.cl[i]/TOTAL)}</td>`:'').join('') +
+    `<td class="num">${fmtN(LT.dur,2)}</td><td class="num">${fmtN(LT.ytw,2)}%</td><td class="num">${fmt$(TOTAL)}</td><td class="num">100.0%</td></tr></tbody></table></div>`;
+  return h;
+}
+
+/* ============ VISTA: GENERAL ============ */
+function renderGeneral(){
+  const cl = gCl(LT);
+  const cov = agrupar(POS, p=>p.match);
+  const consol = agrupar(POS, claveActivo).map(g=>({...g, p:g.items[0], cuentas:[...new Set(g.items.map(p=>p.cuenta))]}));
+  const top15 = consol.slice(0,15);
+  document.getElementById('view-general').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Patrimonio total</div><div class="val">${fmt$(TOTAL)}</div><div class="sub">${CUENTAS.length} cuentas &middot; ${POS.length} posiciones</div></div>
+      <div class="kpi"><div class="lbl">Renta Fija</div><div class="val" style="color:${clColor('Renta Fija')}">${fmtP(LT.c('Renta Fija')/TOTAL)}</div><div class="sub">${fmt$(LT.c('Renta Fija'))}</div></div>
+      <div class="kpi"><div class="lbl">Renta Variable</div><div class="val" style="color:${clColor('Renta Variable')}">${fmtP(LT.c('Renta Variable')/TOTAL)}</div><div class="sub">${fmt$(LT.c('Renta Variable'))}</div></div>
+      <div class="kpi"><div class="lbl">Liquidez</div><div class="val" style="color:${clColor('Liquidez')}">${fmtP(LT.c('Liquidez')/TOTAL)}</div><div class="sub">${fmt$(LT.c('Liquidez'))}</div></div>
+      <div class="kpi"><div class="lbl">Oro + Otros</div><div class="val" style="color:${clColor('Oro / Commodities')}">${fmtP(LT.otros/TOTAL)}</div><div class="sub">${fmt$(LT.otros)}</div></div>
+      <div class="kpi"><div class="lbl">Renta fija</div><div class="val">${fmtN(LT.dur,2)} &middot; ${fmtN(LT.ytw,2)}%</div><div class="sub">duraci&oacute;n mod. &middot; YTW &middot; rating ${ratingDe(LT.ratNum)}</div></div>
+    </div>
+    <div class="grid2">
+      ${cardViz('vGenClase', 'Asset allocation look-through', 'fondos y ETFs abiertos', cl, TOTAL, {label:'Clase de activo'})}
+      ${cardViz('vGenBanco', 'Distribuci&oacute;n por cuenta', '', CUENTAS.map(c=>({k:c.nombre, v:c.total, c:bancoColor(c.nombre)})), TOTAL, {label:'Cuenta', def:'hbar'})}
+    </div>
+    ${cardViz('vGenDet', 'Allocation detallado', 'renta fija por calidad &middot; renta variable por regi&oacute;n', gDet(LT), TOTAL, {label:'Segmento', def:'hbar'})}
+    <div class="card"><div class="card-title">Cuentas custodias <span class="meta">clase de activo look-through &middot; clic en una fila para ver el detalle</span></div>
+      ${matriz()}</div>
+    <div class="card"><div class="card-title">Top 15 posiciones consolidadas <span class="meta">con su composici&oacute;n look-through</span></div>
+      <table><thead><tr><th>Activo</th><th class="num">Valor</th><th class="num">% cartera</th><th>Composici&oacute;n</th>
+        <th class="num">Liq.</th><th class="num">RF</th><th class="num">RV</th><th>Fuente</th><th>Cuentas</th></tr></thead><tbody>
+      ${top15.map(g=>`<tr><td><strong>${esc(g.p.nombre.slice(0,64))}</strong>${g.p.isin?`<div class="muted" style="font-size:10.5px">${esc(g.p.isin)}</div>`:''}</td>
+        <td class="num">${fmt$(g.v)}</td><td class="num">${fmtP(g.v/TOTAL)}</td><td>${miniAA(g.p.lt)}</td>
+        <td class="num">${pctLT(g.p.lt,0)}</td><td class="num">${pctLT(g.p.lt,1)}</td><td class="num">${pctLT(g.p.lt,2)}</td>
+        <td>${tagFuente(g.p)}</td><td class="muted" style="font-size:11px">${g.cuentas.map(esc).join(', ')}</td></tr>`).join('')}
+      </tbody></table></div>
+    <div class="note"><strong>C&oacute;mo est&aacute; calculado.</strong> Composici&oacute;n actual al 30/09/2026 seg&uacute;n los statements de Stifel
+      (2617-8169 y 4852-2502) y Pershing / Insigneo (HAX-810089), a valor de mercado sin intereses devengados. Cada fondo y ETF se abre
+      con la composici&oacute;n cargada en MaximUs (clase de activo, rating, regi&oacute;n y sector).
+      ${cov.map(g=>`<strong>${MATCH_TXT[g.k]}</strong>: ${fmtP(g.v/TOTAL)}`).join(' &middot; ')} del patrimonio.
+      Para los activos que no est&aacute;n en MaximUs se usa un proxy (otra clase del mismo fondo, otra serie del mismo bono o un instrumento
+      del mismo emisor/&iacute;ndice); el detalle est&aacute; en la vista <em>Posiciones</em>. Los money market se cuentan como liquidez y el oro (GLD) como Oro / Commodities.</div>`;
+  dibujarVistas();
+}
+
+/* ============ VISTA: ALLOCATION ============ */
+function renderAllocation(){
+  const geoTot = ordenar(GEO.map((k,i)=>({k, v:LT.rfgeo[i]+LT.rvgeo[i], c:PALETA[i%PALETA.length]})).filter(g=>g.v>0.5));
+  const det = gDet(LT);
+  document.getElementById('view-allocation').innerHTML = `
+    <div class="kpis">
+      ${det.map(g=>`<div class="kpi"><div class="lbl">${esc(g.k)}</div><div class="val" style="color:${g.c==='#bfdbfe'?'#60a5fa':g.c}">${fmtP(g.v/TOTAL)}</div><div class="sub">${fmt$(g.v)}</div></div>`).join('')}
+    </div>
+    <div class="grid2">
+      ${cardViz('vAlClase', 'Clase de activo', 'look-through', gCl(LT), TOTAL, {label:'Clase de activo'})}
+      ${cardViz('vAlDet', 'Allocation detallado', 'RF por calidad &middot; RV por regi&oacute;n', det, TOTAL, {label:'Segmento'})}
+    </div>
+    <div class="grid2">
+      ${cardViz('vAlRfGeo', 'Renta fija por regi&oacute;n', '% de la renta fija', gRfGeo(LT), LT.rfv, {label:'Regi&oacute;n', def:'hbar'})}
+      ${cardViz('vAlRvGeo', 'Renta variable por regi&oacute;n', '% de la renta variable', gRvGeo(LT), LT.rvv, {label:'Regi&oacute;n', def:'hbar'})}
+    </div>
+    ${cardViz('vAlGeo', 'Exposici&oacute;n geogr&aacute;fica total', 'renta fija + renta variable', geoTot, LT.rfv+LT.rvv, {label:'Regi&oacute;n', def:'donut',
+      pie:`<div class="note">Sobre los ${fmt$(LT.rfv+LT.rvv)} de renta fija y variable. La liquidez, el oro y los otros no tienen apertura geogr&aacute;fica. Todas las posiciones est&aacute;n en USD.</div>`})}
+    <div class="card"><div class="card-title">Matriz cuenta &times; clase de activo</div>${matriz()}
+      <div class="note">Cada celda es el peso de esa clase <strong>dentro de la cuenta</strong>; duraci&oacute;n y YTW sobre la renta fija de cada cuenta. Clic en una fila para ver la cuenta.</div></div>
+    <div class="note"><strong>Look-through.</strong> Cada fondo y ETF se abre seg&uacute;n su composici&oacute;n en MaximUs: por ejemplo, el MS EM Debt
+      Opportunities aporta ~37% de liquidez, el Schroder Global Target Return se reparte entre renta fija, variable y otros, y el SSO
+      (S&amp;P 500 2x) tiene ~24% en <em>otros</em>, que es el colateral de los swaps. La renta fija del <em>allocation detallado</em> se abre
+      por rating (Investment Grade = AAA a BBB; High Yield = BB a CCC).</div>`;
+  dibujarVistas();
+}
+
+/* ============ VISTA: RENTA FIJA ============ */
+function renderRentaFija(){
+  const conRF = POS.filter(p=>p.lt.cl[1]>0.5).map(p=>({...p, rf:p.valor*p.lt.cl[1]/100})).sort((a,b)=>b.rf-a.rf);
+  const directos = POS.filter(p=>p.tipo==='Bond');
+  const dirTot = sum(directos.map(p=>p.valor));
+  const viaVeh = LT.rfv - dirTot;
+  const hoy = new Date(), anios = v => (new Date(v)-hoy)/(365.25*24*3600*1000);
+  const porAnio = agrupar(directos, p=>p.vto.slice(0,4)).sort((a,b)=>a.k.localeCompare(b.k));
+  const rat = gRat(LT);
+  const hy = sum(LT.rat.slice(4,7));
+  document.getElementById('view-rentafija').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Renta fija look-through</div><div class="val">${fmt$(LT.rfv)}</div><div class="sub">${fmtP(LT.rfv/TOTAL)} del patrimonio</div></div>
+      <div class="kpi"><div class="lbl">Bonos directos</div><div class="val">${fmt$(dirTot)}</div><div class="sub">${directos.length} l&iacute;neas &middot; ${fmtP(dirTot/LT.rfv)} de la RF</div></div>
+      <div class="kpi"><div class="lbl">V&iacute;a fondos y ETFs</div><div class="val">${fmt$(viaVeh)}</div><div class="sub">${fmtP(viaVeh/LT.rfv)} de la RF</div></div>
+      <div class="kpi"><div class="lbl">Duraci&oacute;n modificada</div><div class="val">${fmtN(LT.dur,2)}</div><div class="sub">a&ntilde;os, ponderada</div></div>
+      <div class="kpi"><div class="lbl">YTW</div><div class="val">${fmtN(LT.ytw,2)}%</div><div class="sub">ponderado</div></div>
+      <div class="kpi"><div class="lbl">Rating promedio</div><div class="val">${ratingDe(LT.ratNum)}</div><div class="sub">${fmtP(LT.ig)} IG &middot; ${fmtP(hy/LT.rfv)} high yield</div></div>
+    </div>
+    <div class="grid2">
+      ${cardViz('vRfRat', 'Calidad crediticia', '% de la renta fija', rat, LT.rfv, {label:'Rating', def:'vbar',
+        pie:`<div class="ighy"><div style="width:${(LT.ig*100).toFixed(1)}%;background:#1e3a8a">Investment Grade ${fmtP(LT.ig)}</div>
+             <div style="width:${(hy/LT.rfv*100).toFixed(1)}%;background:#ea580c">High Yield ${fmtP(hy/LT.rfv)}</div>
+             <div style="flex:1;background:#94a3b8"></div></div>`})}
+      ${cardViz('vRfSec', 'Tipo de emisor', '% de la renta fija', gRfSec(LT), LT.rfv, {label:'Sector'})}
+    </div>
+    ${cardViz('vRfGeo', 'Renta fija por regi&oacute;n', '% de la renta fija', gRfGeo(LT), LT.rfv, {label:'Regi&oacute;n', def:'hbar'})}
+    <div class="card"><div class="card-title">Qu&eacute; aporta cada posici&oacute;n a la renta fija <span class="meta">${conRF.length} posiciones</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Activo</th><th>Cuenta</th><th class="num">RF aportada</th><th class="num">% de la RF</th>
+        <th class="num">Dur.</th><th class="num">YTW</th><th class="num">Contrib. dur.</th><th>Rating</th><th>Fuente</th></tr></thead><tbody>
+      ${conRF.map(p=>`<tr><td>${esc(p.nombre.slice(0,70))}${p.lt.cl[1]<99.5?`<div class="muted" style="font-size:10.5px">${p.lt.cl[1].toFixed(0)}% del fondo es renta fija</div>`:''}</td>
+        <td><span class="dot" style="background:${bancoColor(p.cuenta)}"></span>${esc(p.cuenta)}</td>
+        <td class="num"><strong>${fmt$(p.rf)}</strong></td><td class="num">${fmtP(p.rf/LT.rfv)}</td>
+        <td class="num">${fmtN(p.lt.dur,2)}</td><td class="num">${fmtN(p.lt.ytw,2)}%</td>
+        <td class="num muted">${fmtN(p.rf*p.lt.dur/LT.rfv,2)}</td>
+        <td>${ratingDe(sum(p.lt.rat.slice(0,7))?sum(p.lt.rat.slice(0,7).map((x,i)=>x*(i+1)))/sum(p.lt.rat.slice(0,7)):null)}</td>
+        <td>${tagFuente(p)}</td></tr>`).join('')}
+      <tr class="total"><td>Total</td><td></td><td class="num">${fmt$(LT.rfv)}</td><td class="num">100.0%</td><td class="num">${fmtN(LT.dur,2)}</td>
+        <td class="num">${fmtN(LT.ytw,2)}%</td><td class="num">${fmtN(LT.dur,2)}</td><td>${ratingDe(LT.ratNum)}</td><td></td></tr>
+      </tbody></table></div></div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">Bonos directos: escalera de vencimientos <span class="meta">valor de mercado</span></div>
+        <div class="chart-box"><canvas id="chRfLadder"></canvas></div></div>
+      <div class="card"><div class="card-title">Bonos directos <span class="meta">${directos.length} l&iacute;neas</span></div>
+        <div class="tbl-wrap" style="max-height:340px"><table><thead><tr><th>Instrumento</th><th class="num">Cup&oacute;n</th><th class="num">Vto.</th><th class="num">Valor</th></tr></thead><tbody>
+        ${directos.slice().sort((a,b)=>a.vto.localeCompare(b.vto)).map(p=>`<tr><td>${esc(p.nombre.slice(0,60))}<div class="muted" style="font-size:10.5px">${esc(p.cuenta)}</div></td>
+          <td class="num">${fmtN(p.cupon,2)}%</td><td class="num">${p.vto}</td><td class="num"><strong>${fmt$(p.valor)}</strong></td></tr>`).join('')}
+        </tbody></table></div></div>
+    </div>
+    <div class="note">Duraci&oacute;n, YTW y rating son los datos de MaximUs de cada activo (o de su proxy) y se ponderan por la renta fija que aporta cada posici&oacute;n.
+      En los fondos con derivados (PIMCO Income, Schroder Global Target Return) se excluyen las posiciones netas negativas en derivados para sectores y regiones.</div>`;
+  dibujarVistas();
+  barras$('chRfLadder', porAnio.map(g=>g.k), porAnio.map(g=>g.v), porAnio.map(()=>clColor('Renta Fija')));
+}
+
+/* ============ VISTA: RENTA VARIABLE ============ */
+function renderRentaVariable(){
+  const conRV = POS.filter(p=>p.lt.cl[2]>0.5).map(p=>({...p, rv:p.valor*p.lt.cl[2]/100})).sort((a,b)=>b.rv-a.rv);
+  const geo = gRvGeo(LT), sec = gRvSec(LT);
+  const usa = LT.rvgeo[GEO.indexOf('Norteamérica')], tec = LT.rvsec[RVSEC.indexOf('Tecnología')];
+  const em = ['Latinoamérica','Europa emergente','Medio Oriente y África','China','Asia emergente'].reduce((s,k)=>s+LT.rvgeo[GEO.indexOf(k)],0);
+  document.getElementById('view-rentavariable').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Renta variable look-through</div><div class="val">${fmt$(LT.rvv)}</div><div class="sub">${fmtP(LT.rvv/TOTAL)} del patrimonio</div></div>
+      <div class="kpi"><div class="lbl">Norteam&eacute;rica</div><div class="val">${fmtP(usa/LT.rvv)}</div><div class="sub">${fmt$(usa)}</div></div>
+      <div class="kpi"><div class="lbl">Emergentes</div><div class="val">${fmtP(em/LT.rvv)}</div><div class="sub">LatAm, China, Asia y EMEA emergente</div></div>
+      <div class="kpi"><div class="lbl">Tecnolog&iacute;a</div><div class="val">${fmtP(tec/LT.rvv)}</div><div class="sub">${fmt$(tec)}</div></div>
+      <div class="kpi"><div class="lbl">Posiciones con RV</div><div class="val">${conRV.length}</div><div class="sub">1 acci&oacute;n directa, el resto ETFs y fondos</div></div>
+    </div>
+    <div class="grid2">
+      ${cardViz('vRvGeo', 'Por regi&oacute;n', '% de la renta variable', geo, LT.rvv, {label:'Regi&oacute;n', def:'hbar'})}
+      ${cardViz('vRvSec', 'Por sector', '% de la renta variable', sec, LT.rvv, {label:'Sector', def:'hbar'})}
+    </div>
+    ${cardViz('vRvBloque', 'Desarrollados vs emergentes', '% de la renta variable',
+      [{k:'Norteamérica', v:usa, c:'#0a6b3b'}, {k:'Desarrollados ex-NA', v:gi(LT.rvgeo,DESARR), c:'#4d7c0f'}, {k:'Emergentes', v:em, c:'#84cc16'}].filter(g=>g.v>0.5),
+      LT.rvv, {label:'Bloque', def:'donut'})}
+    <div class="card"><div class="card-title">Qu&eacute; aporta cada posici&oacute;n a la renta variable</div>
+      <div class="tbl-wrap"><table><thead><tr><th>Activo</th><th>Cuenta</th><th class="num">RV aportada</th><th class="num">% de la RV</th>
+        <th class="num">% Norteam.</th><th class="num">% Tecnolog&iacute;a</th><th>Fuente</th></tr></thead><tbody>
+      ${conRV.map(p=>`<tr><td>${esc(p.nombre.slice(0,70))}${p.lt.cl[2]<99.5?`<div class="muted" style="font-size:10.5px">${p.lt.cl[2].toFixed(0)}% del instrumento es renta variable</div>`:''}</td>
+        <td><span class="dot" style="background:${bancoColor(p.cuenta)}"></span>${esc(p.cuenta)}</td>
+        <td class="num"><strong>${fmt$(p.rv)}</strong></td><td class="num">${fmtP(p.rv/LT.rvv)}</td>
+        <td class="num">${p.lt.rvgeo[GEO.indexOf('Norteamérica')].toFixed(0)}%</td><td class="num">${p.lt.rvsec[RVSEC.indexOf('Tecnología')].toFixed(0)}%</td>
+        <td>${tagFuente(p)}</td></tr>`).join('')}
+      <tr class="total"><td>Total</td><td></td><td class="num">${fmt$(LT.rvv)}</td><td class="num">100.0%</td>
+        <td class="num">${fmtP(usa/LT.rvv,0)}</td><td class="num">${fmtP(tec/LT.rvv,0)}</td><td></td></tr></tbody></table></div>
+      <div class="note">El SSO es un ETF apalancado 2x sobre el S&amp;P 500: su exposici&oacute;n econ&oacute;mica a acciones es aproximadamente el doble
+        de su valor de mercado. Ac&aacute; se computa por su valor de mercado, como lo carga MaximUs.</div></div>`;
+  dibujarVistas();
+}
+
+/* ============ VISTA: VEHICULOS ============ */
+function renderVehiculos(){
+  const tipos = ['ETF','Mutual Fund','Money Market Fund'];
+  const veh = POS.filter(p=>tipos.includes(p.tipo));
+  const g = agrupar(veh, claveActivo).map(x=>({...x, p:x.items[0], cuentas:[...new Set(x.items.map(p=>p.cuenta))]}));
+  const vehTot = sum(g.map(x=>x.v));
+  const r = lt(veh);
+  const gest = agrupar(veh, p=>p.gestora);
+  document.getElementById('view-vehiculos').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Fondos y ETFs</div><div class="val">${fmt$(vehTot)}</div><div class="sub">${fmtP(vehTot/TOTAL)} del patrimonio</div></div>
+      <div class="kpi"><div class="lbl">Veh&iacute;culos distintos</div><div class="val">${g.length}</div><div class="sub">${veh.length} tenencias</div></div>
+      <div class="kpi"><div class="lbl">Adentro: renta fija</div><div class="val" style="color:${clColor('Renta Fija')}">${fmtP(r.c('Renta Fija')/vehTot)}</div><div class="sub">${fmt$(r.c('Renta Fija'))}</div></div>
+      <div class="kpi"><div class="lbl">Adentro: renta variable</div><div class="val" style="color:${clColor('Renta Variable')}">${fmtP(r.c('Renta Variable')/vehTot)}</div><div class="sub">${fmt$(r.c('Renta Variable'))}</div></div>
+      <div class="kpi"><div class="lbl">Adentro: liquidez</div><div class="val" style="color:${clColor('Liquidez')}">${fmtP(r.c('Liquidez')/vehTot)}</div><div class="sub">${fmt$(r.c('Liquidez'))}</div></div>
+    </div>
+    <div class="grid2">
+      ${cardViz('vVehCl', 'Qu&eacute; hay adentro de los fondos y ETFs', 'look-through', gCl(r), vehTot, {label:'Clase de activo'})}
+      ${cardViz('vVehGest', 'Por gestora', '% de fondos y ETFs', gest.map((x,i)=>({k:x.k, v:x.v, c:PALETA[i%PALETA.length]})), vehTot, {label:'Gestora', def:'hbar'})}
+    </div>
+    ${cardViz('vVehDet', 'Allocation detallado de los veh&iacute;culos', '', gDet(r), vehTot, {label:'Segmento', def:'hbar'})}
+    <div class="card"><div class="card-title">Todos los veh&iacute;culos <span class="meta">composici&oacute;n seg&uacute;n MaximUs</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Veh&iacute;culo</th><th>Tipo</th><th class="num">Valor</th><th class="num">% cartera</th><th>Composici&oacute;n</th>
+        <th class="num">Liq.</th><th class="num">RF</th><th class="num">RV</th><th class="num">Otros</th><th class="num">Dur.</th><th class="num">YTW</th><th>Fuente</th><th>Cuentas</th></tr></thead><tbody>
+      ${g.map(x=>{const L=x.p.lt; return `<tr><td><strong>${esc(x.p.nombre.slice(0,64))}</strong><div class="muted" style="font-size:10.5px">${esc(x.p.isin||'')}${x.p.ticker?' &middot; '+esc(x.p.ticker):''}</div></td>
+        <td class="muted">${esc(x.p.tipo)}</td><td class="num"><strong>${fmt$(x.v)}</strong></td><td class="num">${fmtP(x.v/TOTAL,2)}</td><td>${miniAA(L)}</td>
+        <td class="num">${pctLT(L,0)}</td><td class="num">${pctLT(L,1)}</td><td class="num">${pctLT(L,2)}</td>
+        <td class="num">${L.cl[3]+L.cl[4]+L.cl[5]>0.5?(L.cl[3]+L.cl[4]+L.cl[5]).toFixed(0)+'%':'<span class="muted">—</span>'}</td>
+        <td class="num muted">${L.dur==null?'—':fmtN(L.dur,2)}</td><td class="num muted">${L.ytw==null?'—':fmtN(L.ytw,2)+'%'}</td>
+        <td>${tagFuente(x.p)}</td><td class="muted" style="font-size:11px">${x.cuentas.map(esc).join(', ')}</td></tr>`;}).join('')}
+      </tbody></table></div></div>`;
+  dibujarVistas();
+}
+
+/* ============ VISTA: CONCENTRACION ============ */
+function renderConcentracion(){
+  const consol = agrupar(POS, claveActivo).map(g=>({...g, p:g.items[0], cuentas:[...new Set(g.items.map(p=>p.cuenta))]}));
+  const rep = consol.filter(g=>g.cuentas.length>1);
+  const top10 = sum(consol.slice(0,10).map(g=>g.v));
+  const hhi = sum(consol.map(g=>Math.pow(g.v/TOTAL*100,2)));
+  // emisores de renta fija directa (bonos) y exposicion a gestoras
+  const emis = agrupar(POS.filter(p=>p.tipo==='Bond'), p=>p.emisor);
+  document.getElementById('view-concentracion').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Top 10 activos</div><div class="val">${fmtP(top10/TOTAL)}</div><div class="sub">${fmt$(top10)}</div></div>
+      <div class="kpi"><div class="lbl">Mayor posici&oacute;n</div><div class="val">${fmtP(consol[0].v/TOTAL)}</div><div class="sub">${esc(consol[0].p.nombre.slice(0,40))}</div></div>
+      <div class="kpi"><div class="lbl">&Iacute;ndice HHI</div><div class="val">${fmtN(hhi,0)}</div><div class="sub">${hhi<1500?'cartera diversificada':hhi<2500?'concentraci&oacute;n moderada':'concentraci&oacute;n alta'}</div></div>
+      <div class="kpi"><div class="lbl">Activos en 2+ cuentas</div><div class="val">${rep.length}</div><div class="sub">${fmt$(sum(rep.map(g=>g.v)))}</div></div>
+    </div>
+    <div class="card"><div class="card-title">Top 20 activos consolidados</div><div class="chart-box tall"><canvas id="chConTop"></canvas></div></div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">Activos en m&aacute;s de una cuenta</div>
+        <table><thead><tr><th>Activo</th><th class="num">Total</th><th>Desglose</th></tr></thead><tbody>
+        ${rep.map(g=>`<tr><td><strong>${esc(g.p.nombre.slice(0,60))}</strong></td><td class="num">${fmt$(g.v)}</td>
+          <td style="font-size:11px">${g.items.map(p=>`<span class="dot" style="background:${bancoColor(p.cuenta)}"></span>${esc(p.cuenta)} ${fmt$(p.valor)}`).join('<br>')}</td></tr>`).join('')}
+        </tbody></table></div>
+      <div class="card"><div class="card-title">Emisores en bonos directos</div>
+        <table><thead><tr><th>Emisor</th><th class="num">Valor</th><th class="num">% cartera</th><th class="num">L&iacute;neas</th></tr></thead><tbody>
+        ${emis.map(g=>`<tr><td><strong>${esc(g.k)}</strong></td><td class="num">${fmt$(g.v)}</td><td class="num">${fmtP(g.v/TOTAL)}</td><td class="num muted">${g.n}</td></tr>`).join('')}
+        </tbody></table></div>
+    </div>
+    <div class="card"><div class="card-title">Ranking completo</div>
+      <div class="tbl-wrap"><table><thead><tr><th class="num">#</th><th>Activo</th><th class="num">Valor</th><th class="num">% cartera</th><th class="num">% acum.</th><th>Composici&oacute;n</th></tr></thead><tbody>
+      ${(()=>{let ac=0; return consol.map((g,i)=>{ac+=g.v; return `<tr><td class="num muted">${i+1}</td><td>${esc(g.p.nombre.slice(0,70))}</td>
+        <td class="num">${fmt$(g.v)}</td><td class="num">${fmtP(g.v/TOTAL,2)}</td><td class="num muted">${fmtP(ac/TOTAL)}</td><td>${miniAA(g.p.lt)}</td></tr>`;}).join('');})()}
+      </tbody></table></div></div>`;
+  const top20 = consol.slice(0,20);
+  barras$('chConTop', top20.map(g=>g.p.nombre.slice(0,40)), top20.map(g=>g.v),
+    top20.map(g=>clColor(CL[g.p.lt.cl.indexOf(Math.max(...g.p.lt.cl))])), {horizontal:true});
+}
+
+/* ============ VISTA: POSICIONES ============ */
+function renderPosiciones(){
+  document.getElementById('view-posiciones').innerHTML = `
+    <div class="card"><div class="card-title">Detalle de posiciones con su look-through <span class="meta">${POS.length} l&iacute;neas de los statements</span></div>
+      <div class="filters"><input class="search" id="qPos" placeholder="Buscar activo, ISIN, CUSIP..." oninput="filtrarPos()">
+        <span class="lblf">Cuenta</span><select class="filter" id="fPosBanco" onchange="filtrarPos()"><option value="">Todas</option>${CUENTAS.map(c=>`<option>${esc(c.nombre)}</option>`).join('')}</select>
+        <span class="lblf">Fuente</span><select class="filter" id="fPosMatch" onchange="filtrarPos()"><option value="">Todas</option><option value="directo">MaximUs</option><option value="proxy">Proxy</option><option value="liquidez">Efectivo</option></select>
+        <span class="lblf" id="posCount"></span><button class="btn-csv" id="btnCopiar" onclick="copiarTabla()">Copiar tabla</button></div>
+      <textarea id="copiaTxt" hidden readonly aria-label="Tabla para copiar" style="width:100%;height:120px;margin-bottom:12px;font-size:11px"></textarea>
+      <div class="tbl-wrap"><table><thead><tr>${COLS_POS.map(([k,t,n])=>`<th class="sortable ${n?'num':''}" onclick="ordenarPos('${k}')">${t}<span class="sarr" data-k="${k}"></span></th>`).join('')}
+        <th>Fuente</th><th>Activo MaximUs usado</th></tr></thead><tbody id="tbPos"></tbody></table></div></div>`;
+  filtrarPos();
+}
+const COLS_POS = [['nombre','Activo',0],['cuenta','Cuenta',0],['valor','Valor',1],['pct','% cartera',1],['liq','Liq.',1],['rf','RF',1],['rv','RV',1],['oro','Oro',1],['otros','Otros',1],['dur','Dur.',1],['ytw','YTW',1]];
+const valPos = (p,k) => ({nombre:p.nombre, cuenta:p.cuenta, valor:p.valor, pct:p.valor, liq:p.lt.cl[0], rf:p.lt.cl[1], rv:p.lt.cl[2], oro:p.lt.cl[3],
+  otros:p.lt.cl[4]+p.lt.cl[5], dur:p.lt.dur, ytw:p.lt.ytw})[k];
+let SORT_POS = {k:'valor', d:-1};
+function ordenarPos(k){ SORT_POS = {k, d: SORT_POS.k===k ? -SORT_POS.d : (k==='nombre'||k==='cuenta'?1:-1)}; filtrarPos(); }
+function filasPos(){
+  const q = (document.getElementById('qPos')?.value||'').toLowerCase();
+  const fb = document.getElementById('fPosBanco')?.value||'', fm = document.getElementById('fPosMatch')?.value||'';
+  return POS.filter(p=>(!q || p.nombre.toLowerCase().includes(q) || (p.isin||'').toLowerCase().includes(q)) && (!fb||p.cuenta===fb) && (!fm||p.match===fm))
+    .slice().sort((a,b)=>{ const x=valPos(a,SORT_POS.k), y=valPos(b,SORT_POS.k);
+      if(x==null) return 1; if(y==null) return -1;
+      return (typeof x==='number' ? x-y : String(x).localeCompare(String(y)))*SORT_POS.d; });
+}
+/* copia la tabla filtrada como texto separado por tabulaciones: se pega directo en Excel */
+function copiarTabla(){
+  const rows = filasPos(), n = v => v==null ? '' : String(Math.round(v*100)/100).replace('.',',');
+  const head = ['Cuenta','Activo','ISIN/CUSIP','Valor USD','% cartera','% Liquidez','% Renta Fija','% Renta Variable','% Oro','% Otros','Duración','YTW','Fuente','Activo MaximUs usado','Nota'];
+  const body = rows.map(p=>[p.cuenta, p.nombre, p.isin||'', n(p.valor), n(p.valor/TOTAL*100), n(p.lt.cl[0]), n(p.lt.cl[1]), n(p.lt.cl[2]), n(p.lt.cl[3]),
+    n(p.lt.cl[4]+p.lt.cl[5]), n(p.lt.dur), n(p.lt.ytw), MATCH_TXT[p.match], p.mxname||'', p.nota||''].map(x=>String(x).replace(/[\t\n]/g,' ')).join('\t'));
+  const txt = [head.join('\t'), ...body].join('\n');
+  const btn = document.getElementById('btnCopiar'), ok = m => { btn.textContent = m; setTimeout(()=>btn.textContent='Copiar tabla', 2200); };
+  const fallback = () => { const ta = document.getElementById('copiaTxt'); ta.hidden = false; ta.value = txt; ta.select(); ok('Seleccioná y copiá (Ctrl+C)'); };
+  try { navigator.clipboard.writeText(txt).then(()=>ok(`Copiadas ${rows.length} filas`), fallback); } catch(e) { fallback(); }
+}
+function filtrarPos(){
+  const rows = filasPos();
+  document.querySelectorAll('.sarr').forEach(s=>s.textContent = s.dataset.k===SORT_POS.k ? (SORT_POS.d>0?' ▲':' ▼') : '');
+  document.getElementById('tbPos').innerHTML = rows.map(p=>{const L=p.lt; return `<tr>
+    <td>${esc(p.nombre.slice(0,72))}<div class="muted" style="font-size:10.5px">${esc(p.isin||'')}</div></td>
+    <td><span class="dot" style="background:${bancoColor(p.cuenta)}"></span>${esc(p.cuenta)}</td>
+    <td class="num"><strong>${fmt$(p.valor)}</strong></td><td class="num muted">${fmtP(p.valor/TOTAL,2)}</td>
+    ${[0,1,2,3].map(i=>`<td class="num">${pctLT(L,i)}</td>`).join('')}
+    <td class="num">${L.cl[4]+L.cl[5]>0.5?(L.cl[4]+L.cl[5]).toFixed(0)+'%':'<span class="muted">—</span>'}</td>
+    <td class="num muted">${L.dur==null?'—':fmtN(L.dur,2)}</td><td class="num muted">${L.ytw==null?'—':fmtN(L.ytw,2)+'%'}</td>
+    <td>${tagFuente(p)}</td><td style="font-size:11px">${esc(p.mxname||'—')}${p.nota?`<div class="muted" style="font-size:10.5px">${esc(p.nota)}</div>`:''}</td></tr>`;}).join('');
+  document.getElementById('posCount').textContent = `${rows.length} posiciones · ${fmt$(sum(rows.map(p=>p.valor)))}`;
+}
+
+/* ============ VISTA: CUENTA ============ */
+function renderBanco(nombre){
+  const c = CUENTAS_ALL.find(x=>x.nombre===nombre);
+  const items = POS_ALL.filter(p=>p.cuenta===nombre).sort((a,b)=>b.valor-a.valor);
+  const r = lt(items);
+  document.getElementById('view-banco').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Valor de la cuenta</div><div class="val">${fmt$(c.total)}</div><div class="sub">${fmtP(c.total/TOTAL_ALL)} del consolidado</div></div>
+      <div class="kpi"><div class="lbl">Renta Fija</div><div class="val" style="color:${clColor('Renta Fija')}">${fmtP(r.c('Renta Fija')/r.total)}</div><div class="sub">${fmt$(r.c('Renta Fija'))}</div></div>
+      <div class="kpi"><div class="lbl">Renta Variable</div><div class="val" style="color:${clColor('Renta Variable')}">${fmtP(r.c('Renta Variable')/r.total)}</div><div class="sub">${fmt$(r.c('Renta Variable'))}</div></div>
+      <div class="kpi"><div class="lbl">Liquidez</div><div class="val" style="color:${clColor('Liquidez')}">${fmtP(r.c('Liquidez')/r.total)}</div><div class="sub">${fmt$(r.c('Liquidez'))}</div></div>
+      ${r.rfv?`<div class="kpi"><div class="lbl">Renta fija</div><div class="val">${fmtN(r.dur,2)} &middot; ${fmtN(r.ytw,2)}%</div><div class="sub">duraci&oacute;n &middot; YTW &middot; rating ${ratingDe(r.ratNum)}</div></div>`:''}
+    </div>
+    <div class="grid2">
+      ${cardViz('vBcoCl', 'Clase de activo look-through', '', gCl(r), r.total, {label:'Clase de activo'})}
+      ${cardViz('vBcoDet', 'Allocation detallado', '', gDet(r), r.total, {label:'Segmento', def:'hbar'})}
+    </div>
+    <div class="grid2">
+      ${r.rfv?cardViz('vBcoRat', 'Calidad crediticia de la renta fija', '', gRat(r), r.rfv, {label:'Rating', def:'vbar'}):''}
+      ${r.rfv?cardViz('vBcoRfGeo', 'Renta fija por regi&oacute;n', '', gRfGeo(r), r.rfv, {label:'Regi&oacute;n', def:'hbar'}):''}
+    </div>
+    ${r.rvv?`<div class="grid2">
+      ${cardViz('vBcoRvGeo', 'Renta variable por regi&oacute;n', '', gRvGeo(r), r.rvv, {label:'Regi&oacute;n', def:'hbar'})}
+      ${cardViz('vBcoRvSec', 'Renta variable por sector', '', gRvSec(r), r.rvv, {label:'Sector', def:'hbar'})}</div>`:''}
+    <div class="card"><div class="card-title">Posiciones de ${esc(nombre)} <span class="meta">${items.length} l&iacute;neas</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Activo</th><th class="num">Valor</th><th class="num">% cuenta</th><th>Composici&oacute;n</th>
+        <th class="num">Liq.</th><th class="num">RF</th><th class="num">RV</th><th class="num">Dur.</th><th class="num">YTW</th><th>Fuente</th></tr></thead><tbody>
+      ${items.map(p=>`<tr><td>${esc(p.nombre.slice(0,72))}<div class="muted" style="font-size:10.5px">${esc(p.isin||'')}</div></td>
+        <td class="num"><strong>${fmt$(p.valor)}</strong></td><td class="num">${fmtP(p.valor/c.total,2)}</td><td>${miniAA(p.lt)}</td>
+        <td class="num">${pctLT(p.lt,0)}</td><td class="num">${pctLT(p.lt,1)}</td><td class="num">${pctLT(p.lt,2)}</td>
+        <td class="num muted">${p.lt.dur==null?'—':fmtN(p.lt.dur,2)}</td><td class="num muted">${p.lt.ytw==null?'—':fmtN(p.lt.ytw,2)+'%'}</td><td>${tagFuente(p)}</td></tr>`).join('')}
+      <tr class="total"><td>Total ${esc(nombre)}</td><td class="num">${fmt$(c.total)}</td><td class="num">100.0%</td><td></td>
+        <td class="num">${fmtP(r.c('Liquidez')/r.total,0)}</td><td class="num">${fmtP(r.c('Renta Fija')/r.total,0)}</td><td class="num">${fmtP(r.c('Renta Variable')/r.total,0)}</td>
+        <td class="num">${fmtN(r.dur,2)}</td><td class="num">${r.ytw==null?'—':fmtN(r.ytw,2)+'%'}</td><td></td></tr>
+      </tbody></table></div>
+      <div class="note">Total informado por el custodio: <strong>${fmt$(c.total_reportado,2)}</strong>. Suma de posiciones: <strong>${fmt$(c.total,2)}</strong>.
+        ${Math.abs(c.total-c.total_reportado)<0.5?'Cuadra exactamente.':'<span style="color:var(--red)">Existe una diferencia a revisar.</span>'}</div></div>`;
+  dibujarVistas();
+}
+
+/* ============ navegacion ============ */
+const TITULOS = {
+  general:['CONSOLIDADO LOOK-THROUGH · TODAS LAS CUENTAS','Dashboard General'],
+  allocation:['CONSOLIDADO LOOK-THROUGH · DISTRIBUCIÓN','Asset Allocation'],
+  rentafija:['CONSOLIDADO LOOK-THROUGH · RENTA FIJA','Renta Fija'],
+  rentavariable:['CONSOLIDADO LOOK-THROUGH · RENTA VARIABLE','Renta Variable'],
+  vehiculos:['CONSOLIDADO LOOK-THROUGH · GESTIÓN DELEGADA','Fondos y ETFs'],
+  concentracion:['CONSOLIDADO · RIESGO DE CONCENTRACIÓN','Concentración'],
+  posiciones:['CONSOLIDADO LOOK-THROUGH · DETALLE','Posiciones'],
+};
+const RENDER = {general:renderGeneral, allocation:renderAllocation, rentafija:renderRentaFija, rentavariable:renderRentaVariable,
+  vehiculos:renderVehiculos, concentracion:renderConcentracion, posiciones:renderPosiciones};
+const HECHAS = new Set();
+function mostrar(v, banco){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
+  if(v==='banco'){
+    document.getElementById('view-banco').classList.add('active');
+    document.querySelector(`.sb-item[data-banco="${banco}"]`)?.classList.add('active');
+    document.getElementById('mhTag').textContent = 'CUENTA INDIVIDUAL · LOOK-THROUGH';
+    document.getElementById('mhH1').innerHTML = esc(banco) + ` <span class="badge">${fmtP(CUENTAS_ALL.find(c=>c.nombre===banco).total/TOTAL_ALL)} del total</span>`;
+    renderBanco(banco);
+  } else {
+    document.getElementById('view-'+v).classList.add('active');
+    document.querySelector(`.sb-item[data-view="${v}"]`)?.classList.add('active');
+    document.getElementById('mhTag').textContent = TITULOS[v][0];
+    document.getElementById('mhH1').innerHTML = TITULOS[v][1];
+    if(!HECHAS.has(v)){ RENDER[v](); HECHAS.add(v); }
+  }
+  window.scrollTo(0,0);
+}
+function irBanco(n){ mostrar('banco', n); }
+
+/* ============ filtro global por cuenta ============ */
+let VISTA = 'general';
+function setScope(s){
+  SCOPE = s;
+  POS = s ? POS_ALL.filter(p=>p.cuenta===s) : POS_ALL;
+  CUENTAS = s ? CUENTAS_ALL.filter(c=>c.nombre===s) : CUENTAS_ALL;
+  TOTAL = sum(POS.map(p=>p.valor)); LT = lt(POS);
+  Object.keys(CHARTS).forEach(k=>{ CHARTS[k].destroy(); delete CHARTS[k]; });
+  HECHAS.clear(); cabecera();
+  mostrar(VISTA==='banco' ? 'general' : VISTA);
+}
+function cabecera(){
+  document.getElementById('sbSub').textContent = `${CUENTAS.length} cuenta${CUENTAS.length>1?'s':''} · ${POS.length} posiciones`;
+  document.getElementById('cntPos').textContent = POS.length;
+  document.getElementById('sbFootTot').textContent = fmt$(TOTAL);
+  document.getElementById('mhMeta').innerHTML = `<div style="font-size:17px;font-weight:800;color:var(--text)">${fmt$(TOTAL)}</div>
+    <div>${SCOPE ? esc(SCOPE) : CUENTAS.length+' cuentas'} &middot; ${POS.length} posiciones &middot; al 30/09/2026</div>`;
+}
+const _mostrar = mostrar;
+mostrar = function(v, banco){ VISTA = v; _mostrar(v, banco);
+  if(v!=='banco' && SCOPE) document.getElementById('mhH1').innerHTML += ` <span class="badge">${esc(SCOPE)}</span>`; };
+
+/* init */
+document.getElementById('sbFoot').innerHTML = 'Composición al 30/09/2026<br>Look-through con datos de MaximUs';
+document.getElementById('sbScope').innerHTML = `<option value="">Todas las cuentas</option>` + CUENTAS_ALL.map(c=>`<option>${esc(c.nombre)}</option>`).join('');
+document.getElementById('sbBancos').innerHTML = CUENTAS_ALL.map(c=>`
+  <div class="sb-item" data-banco="${esc(c.nombre)}" onclick="irBanco('${esc(c.nombre)}')">
+    <span class="cdot" style="background:${bancoColor(c.nombre)}"></span> ${esc(c.nombre)}
+    <span class="count">${fmtP(c.total/TOTAL_ALL,0)}</span></div>`).join('');
+document.querySelectorAll('.sb-item[data-view]').forEach(el=>el.addEventListener('click', ()=>mostrar(el.dataset.view)));
+cabecera();
+mostrar('general');
+
+
+</script>
+</body>
+</html>
